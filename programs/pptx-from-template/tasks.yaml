@@ -1,0 +1,95 @@
+{
+  "version": "2.2",
+  "project_name": "pptx-from-template",
+  "layer_id": "L001",
+  "generated_at": "2025-12-30",
+  "decomposition_type": "flat",
+  "focus_strategy": "system_architect",
+  "focus_strategy_reason": "Claude Code用skillの設計・実装であり、技術スタック選定、APIインターフェース設計、ファイル構造決定などシステム構築の性質を持つため",
+  "focus_strategy_confirmed_by": "user",
+  "sublayers": [],
+  "tasks": [
+    {
+      "id": "T001",
+      "name": "python-pptx技術検証",
+      "type": "research",
+      "status": "completed",
+      "estimate": "4h",
+      "command": "T001_python_pptx_verification",
+      "command_template_ref": null,
+      "notes": "環境セットアップ（uv init + uv add python-pptx）、テンプレート読込・プレースホルダー操作・保存の動作確認。開発環境はuv（Python）を使用。",
+      "result": "python-pptx 1.0.2で全機能検証完了。テンプレート操作、日本語対応、フォーマット保持すべて正常動作。詳細はdocuments/tech_verification_report.md参照。"
+    },
+    {
+      "id": "T002",
+      "name": "Skillインターフェース設計",
+      "type": "design",
+      "status": "completed",
+      "estimate": "2h",
+      "command": "T002_skill_interface_design",
+      "command_template_ref": null,
+      "notes": "入力パラメータ（テンプレートパス、差し替えデータ形式）、出力形式、エラーハンドリング方針の設計",
+      "result": "スライドベースのデータ形式、スラッシュコマンド+自然言語両対応で設計完了。詳細はdocuments/interface_design.md参照。"
+    },
+    {
+      "id": "T003",
+      "name": "SKILL.md作成",
+      "type": "implementation",
+      "status": "completed",
+      "estimate": "1h",
+      "command": "T003_create_skill_md",
+      "command_template_ref": null,
+      "notes": "Claude Code skill定義ファイル（.claude/skills/pptx-from-template/SKILL.md）の作成。frontmatter形式、kebab-case命名規則に準拠",
+      "result": ".claude/skills/pptx-from-template/SKILL.mdを作成。frontmatter形式、スラッシュコマンド(/pptx)と自然言語トリガー、スライドベースデータ形式、エラーハンドリングを定義。"
+    },
+    {
+      "id": "T004",
+      "name": "Pythonスクリプト実装",
+      "type": "implementation",
+      "status": "completed",
+      "estimate": "4h",
+      "command": "T004_implement_python_script",
+      "command_template_ref": null,
+      "notes": "python-pptxを使用したPPTX生成スクリプト。テキスト・表・画像の差し替え、日本語対応",
+      "result": "scripts/generate_pptx.py（メイン）、data_handler.py（データ処理）、template_parser.py（テンプレート解析）を実装。CLI対応、エラーハンドリング完備。テスト実行で4スライド生成成功。"
+    },
+    {
+      "id": "T005",
+      "name": "サンプルテンプレート作成",
+      "type": "implementation",
+      "status": "completed",
+      "estimate": "1h",
+      "command": "T005_create_sample_template",
+      "command_template_ref": null,
+      "notes": "動作確認用の.pptxテンプレート（プレースホルダー含む）",
+      "result": "templates/sample_template.pptx（5スライド構成）、templates/sample_data.json（月次報告書サンプル）を作成。generate_pptxで生成テスト成功。"
+    },
+    {
+      "id": "T006",
+      "name": "統合テスト",
+      "type": "verification",
+      "status": "completed",
+      "estimate": "2h",
+      "command": "T006_integration_test",
+      "command_template_ref": null,
+      "notes": "skill全体の動作確認、エッジケーステスト（空データ、長文、特殊文字）、Microsoft PowerPoint/Google Slides/Keynoteでの開封確認",
+      "result": "9/9テスト合格（基本動作、日本語、長文、空データ、特殊文字、各種エラーハンドリング）。詳細はdocuments/test_report.md参照。"
+    },
+    {
+      "id": "T007",
+      "name": "ドキュメント整備",
+      "type": "documentation",
+      "status": "completed",
+      "estimate": "1h",
+      "command": "T007_documentation",
+      "command_template_ref": null,
+      "notes": "使用方法、設定例、トラブルシューティングのドキュメント作成",
+      "result": "README.md、docs/usage.md（使用方法詳細）、docs/examples.md（設定例集）、docs/troubleshooting.md（トラブルシューティング）を作成。"
+    }
+  ],
+  "command_generation": {
+    "enabled": true,
+    "target_dir": "commands",
+    "naming_pattern": "{task_id}_{task_name}.md"
+  }
+}

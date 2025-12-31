@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.venv/
+test_output.pptx
+templates/sample_output.pptx

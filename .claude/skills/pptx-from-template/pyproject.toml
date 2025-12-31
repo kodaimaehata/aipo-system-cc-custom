@@ -1,0 +1,17 @@
+[project]
+name = "pptx-from-template"
+version = "0.1.0"
+description = "Generate PowerPoint presentations from templates"
+readme = "SKILL.md"
+requires-python = ">=3.11"
+dependencies = [
+    "python-pptx>=1.0.2",
+]
+
+[project.optional-dependencies]
+yaml = [
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+pptx-from-template = "scripts.generate_pptx:main"

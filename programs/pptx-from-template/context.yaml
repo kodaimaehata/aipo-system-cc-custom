@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "project_name": "pptx-from-template",
+  "layer_id": "L001",
+  "generated_at": "2025-12-30",
+  "parent_context_dir": null,
+  "context_documents": [
+    {
+      "name": "Team",
+      "path": "context/01_team.md",
+      "summary": "プロジェクトオーナーとステークホルダー情報"
+    },
+    {
+      "name": "Resources",
+      "path": "context/02_resources.md",
+      "summary": "python-pptxを中心とした技術スタックと参考リソース"
+    },
+    {
+      "name": "Constraints",
+      "path": "context/03_constraints.md",
+      "summary": "Claude Code Skill仕様への準拠、テンプレート維持、日本語対応などの制約"
+    },
+    {
+      "name": "Development Environment",
+      "path": "context/04_dev_environment.md",
+      "summary": "uv（Python）を使用した開発環境セットアップ手順"
+    }
+  ]
+}

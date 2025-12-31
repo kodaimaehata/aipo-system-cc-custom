@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "project_name": "pptx-from-template",
+  "layer_id": "L001",
+  "layer_name": "Root",
+  "workflow_preset": "general",
+  "goal": {
+    "description": "所定のテンプレートのデザインに従ってパワーポイントを作成できるClaude Code用skillを開発する",
+    "success_criteria": [
+      "既存の.pptxテンプレートファイルを読み込める",
+      "テンプレートのデザイン（レイアウト、スタイル、フォント）を維持したまま内容を差し替えられる",
+      "Claude Codeのskillとして動作し、ユーザーがスラッシュコマンドで呼び出せる",
+      "生成されたPowerPointファイルが正常に開ける"
+    ]
+  },
+  "mode": "concrete",
+  "owner": "kodai",
+  "deadline": null,
+  "parent_layer_id": null,
+  "created_at": "2025-12-30",
+  "updated_at": "2025-12-30"
+}
