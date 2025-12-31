@@ -150,6 +150,204 @@ slides:
 
 ※ YAML使用時は `uv add pyyaml` が必要
 
+## 例5: フリーフォーム図形（shapes）
+
+自由な位置に図形やテキストを配置:
+
+```json
+{
+  "slides": [
+    {
+      "layout": 0,
+      "title": "会社説明資料",
+      "subtitle": "株式会社サンプル"
+    },
+    {
+      "layout": 6,
+      "shapes": [
+        {
+          "type": "textbox",
+          "left": 0.5,
+          "top": 0.3,
+          "width": 9.0,
+          "height": 1.0,
+          "text": "会社概要",
+          "font_size": 36,
+          "bold": true,
+          "align": "center"
+        },
+        {
+          "type": "shape",
+          "shape_type": "rounded_rectangle",
+          "left": 0.5,
+          "top": 1.5,
+          "width": 4.0,
+          "height": 2.5,
+          "fill_color": "#E3F2FD",
+          "text": "ミッション\n\n顧客価値の最大化",
+          "font_color": "#1565C0"
+        },
+        {
+          "type": "shape",
+          "shape_type": "rounded_rectangle",
+          "left": 5.0,
+          "top": 1.5,
+          "width": 4.0,
+          "height": 2.5,
+          "fill_color": "#E8F5E9",
+          "text": "ビジョン\n\n業界No.1を目指す",
+          "font_color": "#2E7D32"
+        },
+        {
+          "type": "line",
+          "start_x": 5.0,
+          "start_y": 4.5,
+          "end_x": 5.0,
+          "end_y": 5.5,
+          "line_color": "#666666",
+          "line_width": 2
+        },
+        {
+          "type": "shape",
+          "shape_type": "down_arrow",
+          "left": 4.0,
+          "top": 5.0,
+          "width": 2.0,
+          "height": 1.5,
+          "fill_color": "#FFA726",
+          "text": "成長"
+        }
+      ]
+    },
+    {
+      "layout": 6,
+      "shapes": [
+        {
+          "type": "textbox",
+          "left": 0.5,
+          "top": 0.3,
+          "width": 9.0,
+          "height": 0.8,
+          "text": "組織図",
+          "font_size": 32,
+          "bold": true,
+          "align": "center"
+        },
+        {
+          "type": "shape",
+          "shape_type": "rectangle",
+          "left": 3.5,
+          "top": 1.2,
+          "width": 3.0,
+          "height": 0.8,
+          "fill_color": "#1976D2",
+          "text": "代表取締役",
+          "font_color": "white"
+        },
+        {
+          "type": "shape",
+          "shape_type": "rectangle",
+          "left": 0.5,
+          "top": 2.8,
+          "width": 2.5,
+          "height": 0.8,
+          "fill_color": "#42A5F5",
+          "text": "営業部",
+          "font_color": "white"
+        },
+        {
+          "type": "shape",
+          "shape_type": "rectangle",
+          "left": 3.75,
+          "top": 2.8,
+          "width": 2.5,
+          "height": 0.8,
+          "fill_color": "#42A5F5",
+          "text": "開発部",
+          "font_color": "white"
+        },
+        {
+          "type": "shape",
+          "shape_type": "rectangle",
+          "left": 7.0,
+          "top": 2.8,
+          "width": 2.5,
+          "height": 0.8,
+          "fill_color": "#42A5F5",
+          "text": "管理部",
+          "font_color": "white"
+        },
+        {
+          "type": "table",
+          "left": 0.5,
+          "top": 4.5,
+          "width": 9.0,
+          "headers": ["部門", "人数", "担当"],
+          "rows": [
+            ["営業部", "15名", "国内・海外営業"],
+            ["開発部", "25名", "製品開発・保守"],
+            ["管理部", "10名", "人事・経理・総務"]
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 例6: 図形と画像の組み合わせ
+
+画像と図形を組み合わせたレイアウト:
+
+```json
+{
+  "slides": [
+    {
+      "layout": 6,
+      "shapes": [
+        {
+          "type": "textbox",
+          "left": 0.5,
+          "top": 0.5,
+          "width": 9.0,
+          "height": 1.0,
+          "text": "製品紹介",
+          "font_size": 36,
+          "bold": true
+        },
+        {
+          "type": "image",
+          "left": 0.5,
+          "top": 1.8,
+          "width": 4.5,
+          "path": "images/product.png"
+        },
+        {
+          "type": "textbox",
+          "left": 5.5,
+          "top": 1.8,
+          "width": 4.0,
+          "height": 4.0,
+          "text": "主な特徴:\n\n• 高性能プロセッサ搭載\n• 省電力設計\n• コンパクトサイズ\n• 5年保証付き",
+          "font_size": 18
+        },
+        {
+          "type": "shape",
+          "shape_type": "star",
+          "left": 0.5,
+          "top": 5.5,
+          "width": 1.5,
+          "height": 1.5,
+          "fill_color": "#FFD700",
+          "text": "NEW",
+          "font_color": "#333333"
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## カスタムテンプレートの作り方
 
 1. **PowerPointで作成**

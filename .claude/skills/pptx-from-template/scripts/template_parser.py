@@ -10,6 +10,8 @@ from typing import Any
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.dml.color import RGBColor
 
 
 class TemplateError(Exception):
@@ -164,6 +166,10 @@ def add_slide_from_data(prs: Presentation, slide_data: dict[str, Any], warnings:
     if "image" in slide_data:
         _add_image_to_slide(slide, slide_data["image"], warnings)
 
+    # Add free-form shapes
+    if "shapes" in slide_data:
+        _add_shapes_to_slide(slide, slide_data["shapes"], warnings)
+
 
 def _add_table_to_slide(slide, table_data: dict[str, Any], warnings: list[str]) -> None:
     """Add a table to the slide.
@@ -256,3 +262,342 @@ def get_layout_name(prs: Presentation, layout_idx: int) -> str:
     except Exception:
         pass
     return "Unknown"
+
+
+# =============================================================================
+# Free-form shapes support
+# =============================================================================
+
+# Shape type mapping
+SHAPE_TYPE_MAP = {
+    "rectangle": MSO_SHAPE.RECTANGLE,
+    "rounded_rectangle": MSO_SHAPE.ROUNDED_RECTANGLE,
+    "oval": MSO_SHAPE.OVAL,
+    "circle": MSO_SHAPE.OVAL,
+    "triangle": MSO_SHAPE.ISOSCELES_TRIANGLE,
+    "right_arrow": MSO_SHAPE.RIGHT_ARROW,
+    "left_arrow": MSO_SHAPE.LEFT_ARROW,
+    "up_arrow": MSO_SHAPE.UP_ARROW,
+    "down_arrow": MSO_SHAPE.DOWN_ARROW,
+    "pentagon": MSO_SHAPE.PENTAGON,
+    "hexagon": MSO_SHAPE.HEXAGON,
+    "star": MSO_SHAPE.STAR_5_POINT,
+    "callout": MSO_SHAPE.RECTANGULAR_CALLOUT,
+    "cloud": MSO_SHAPE.CLOUD,
+    "heart": MSO_SHAPE.HEART,
+    "lightning": MSO_SHAPE.LIGHTNING_BOLT,
+}
+
+
+def _parse_color(color_str: str) -> RGBColor | None:
+    """Parse color string to RGBColor.
+
+    Args:
+        color_str: Color in #RRGGBB format or color name
+
+    Returns:
+        RGBColor object or None if invalid
+    """
+    if not color_str:
+        return None
+
+    # Handle hex color
+    if color_str.startswith("#"):
+        try:
+            hex_color = color_str.lstrip("#")
+            if len(hex_color) == 6:
+                r = int(hex_color[0:2], 16)
+                g = int(hex_color[2:4], 16)
+                b = int(hex_color[4:6], 16)
+                return RGBColor(r, g, b)
+        except ValueError:
+            pass
+
+    # Common color names
+    color_names = {
+        "red": RGBColor(255, 0, 0),
+        "green": RGBColor(0, 128, 0),
+        "blue": RGBColor(0, 0, 255),
+        "yellow": RGBColor(255, 255, 0),
+        "orange": RGBColor(255, 165, 0),
+        "purple": RGBColor(128, 0, 128),
+        "black": RGBColor(0, 0, 0),
+        "white": RGBColor(255, 255, 255),
+        "gray": RGBColor(128, 128, 128),
+        "grey": RGBColor(128, 128, 128),
+    }
+    return color_names.get(color_str.lower())
+
+
+def _add_shapes_to_slide(slide, shapes: list[dict[str, Any]], warnings: list[str]) -> None:
+    """Add free-form shapes to the slide.
+
+    Args:
+        slide: Slide object
+        shapes: List of shape specifications
+        warnings: List to append warnings to
+    """
+    for i, shape_data in enumerate(shapes):
+        shape_type = shape_data.get("type", "").lower()
+
+        try:
+            if shape_type == "textbox":
+                _add_textbox_shape(slide, shape_data, warnings)
+            elif shape_type == "image":
+                _add_image_shape(slide, shape_data, warnings)
+            elif shape_type == "shape":
+                _add_basic_shape(slide, shape_data, warnings)
+            elif shape_type == "table":
+                _add_table_shape(slide, shape_data, warnings)
+            elif shape_type == "line":
+                _add_line_shape(slide, shape_data, warnings)
+            else:
+                warnings.append(f"W005: shapes[{i}]: 未知のshapeタイプ '{shape_type}'")
+        except Exception as e:
+            warnings.append(f"W005: shapes[{i}]: 図形の追加に失敗しました: {e}")
+
+
+def _add_textbox_shape(slide, shape_data: dict[str, Any], warnings: list[str]) -> None:
+    """Add a textbox shape.
+
+    Args:
+        slide: Slide object
+        shape_data: Shape specification
+        warnings: List to append warnings to
+    """
+    left = Inches(shape_data.get("left", 0))
+    top = Inches(shape_data.get("top", 0))
+    width = Inches(shape_data.get("width", 2))
+    height = Inches(shape_data.get("height", 1))
+
+    textbox = slide.shapes.add_textbox(left, top, width, height)
+    tf = textbox.text_frame
+    tf.word_wrap = True
+
+    text = shape_data.get("text", "")
+    tf.text = str(text)
+
+    # Apply text formatting
+    font_size = shape_data.get("font_size")
+    bold = shape_data.get("bold", False)
+    italic = shape_data.get("italic", False)
+    font_color = shape_data.get("font_color")
+    align = shape_data.get("align", "left")
+
+    for paragraph in tf.paragraphs:
+        # Alignment
+        if align == "center":
+            paragraph.alignment = PP_ALIGN.CENTER
+        elif align == "right":
+            paragraph.alignment = PP_ALIGN.RIGHT
+        else:
+            paragraph.alignment = PP_ALIGN.LEFT
+
+        for run in paragraph.runs:
+            if font_size:
+                run.font.size = Pt(font_size)
+            run.font.bold = bold
+            run.font.italic = italic
+            if font_color:
+                color = _parse_color(font_color)
+                if color:
+                    run.font.color.rgb = color
+
+    # Background fill
+    fill_color = shape_data.get("fill_color")
+    if fill_color:
+        color = _parse_color(fill_color)
+        if color:
+            textbox.fill.solid()
+            textbox.fill.fore_color.rgb = color
+
+
+def _add_image_shape(slide, shape_data: dict[str, Any], warnings: list[str]) -> None:
+    """Add an image shape with custom position.
+
+    Args:
+        slide: Slide object
+        shape_data: Shape specification
+        warnings: List to append warnings to
+    """
+    image_path = shape_data.get("path", "")
+    if not image_path:
+        warnings.append("W001: 画像パスが指定されていません")
+        return
+
+    path = Path(image_path)
+    if not path.exists():
+        warnings.append(f"W001: 画像ファイルが見つかりません ({image_path})")
+        return
+
+    left = Inches(shape_data.get("left", 0))
+    top = Inches(shape_data.get("top", 0))
+
+    # Width and height - at least one should be specified
+    width = shape_data.get("width")
+    height = shape_data.get("height")
+
+    try:
+        if width and height:
+            slide.shapes.add_picture(str(path), left, top, Inches(width), Inches(height))
+        elif width:
+            slide.shapes.add_picture(str(path), left, top, width=Inches(width))
+        elif height:
+            slide.shapes.add_picture(str(path), left, top, height=Inches(height))
+        else:
+            # Default width
+            slide.shapes.add_picture(str(path), left, top, width=Inches(4))
+    except Exception as e:
+        warnings.append(f"W001: 画像の追加に失敗しました: {e}")
+
+
+def _add_basic_shape(slide, shape_data: dict[str, Any], warnings: list[str]) -> None:
+    """Add a basic shape (rectangle, oval, arrow, etc.).
+
+    Args:
+        slide: Slide object
+        shape_data: Shape specification
+        warnings: List to append warnings to
+    """
+    shape_type_name = shape_data.get("shape_type", "rectangle").lower()
+    shape_type = SHAPE_TYPE_MAP.get(shape_type_name, MSO_SHAPE.RECTANGLE)
+
+    left = Inches(shape_data.get("left", 0))
+    top = Inches(shape_data.get("top", 0))
+    width = Inches(shape_data.get("width", 2))
+    height = Inches(shape_data.get("height", 1))
+
+    shape = slide.shapes.add_shape(shape_type, left, top, width, height)
+
+    # Fill color
+    fill_color = shape_data.get("fill_color")
+    if fill_color:
+        color = _parse_color(fill_color)
+        if color:
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = color
+
+    # Line/border color
+    line_color = shape_data.get("line_color")
+    if line_color:
+        color = _parse_color(line_color)
+        if color:
+            shape.line.color.rgb = color
+
+    # Line width
+    line_width = shape_data.get("line_width")
+    if line_width:
+        shape.line.width = Pt(line_width)
+
+    # Text inside shape
+    text = shape_data.get("text")
+    if text:
+        shape.text = str(text)
+        tf = shape.text_frame
+        tf.word_wrap = True
+
+        font_size = shape_data.get("font_size")
+        font_color = shape_data.get("font_color")
+        align = shape_data.get("align", "center")
+
+        for paragraph in tf.paragraphs:
+            if align == "center":
+                paragraph.alignment = PP_ALIGN.CENTER
+            elif align == "right":
+                paragraph.alignment = PP_ALIGN.RIGHT
+            else:
+                paragraph.alignment = PP_ALIGN.LEFT
+
+            for run in paragraph.runs:
+                if font_size:
+                    run.font.size = Pt(font_size)
+                if font_color:
+                    color = _parse_color(font_color)
+                    if color:
+                        run.font.color.rgb = color
+
+
+def _add_table_shape(slide, shape_data: dict[str, Any], warnings: list[str]) -> None:
+    """Add a table at custom position.
+
+    Args:
+        slide: Slide object
+        shape_data: Shape specification with headers and rows
+        warnings: List to append warnings to
+    """
+    headers = shape_data.get("headers", [])
+    rows = shape_data.get("rows", [])
+
+    if not headers and not rows:
+        return
+
+    cols = len(headers) if headers else (len(rows[0]) if rows else 0)
+    row_count = len(rows) + (1 if headers else 0)
+
+    if cols == 0 or row_count == 0:
+        return
+
+    left = Inches(shape_data.get("left", 0.5))
+    top = Inches(shape_data.get("top", 2.0))
+    width = Inches(shape_data.get("width", 9.0))
+    height = Inches(shape_data.get("height", 0.8 * row_count))
+
+    table = slide.shapes.add_table(row_count, cols, left, top, width, height).table
+
+    # Set column widths
+    col_width = int(width / cols)
+    for i in range(cols):
+        table.columns[i].width = col_width
+
+    # Fill headers
+    if headers:
+        for i, header in enumerate(headers):
+            cell = table.cell(0, i)
+            cell.text = str(header)
+            for paragraph in cell.text_frame.paragraphs:
+                for run in paragraph.runs:
+                    run.font.bold = True
+
+    # Fill rows
+    start_row = 1 if headers else 0
+    for row_idx, row in enumerate(rows):
+        for col_idx, value in enumerate(row):
+            if col_idx < cols:
+                table.cell(start_row + row_idx, col_idx).text = str(value)
+
+
+def _add_line_shape(slide, shape_data: dict[str, Any], warnings: list[str]) -> None:
+    """Add a line connector.
+
+    Args:
+        slide: Slide object
+        shape_data: Shape specification with start and end points
+        warnings: List to append warnings to
+    """
+    start_x = Inches(shape_data.get("start_x", 0))
+    start_y = Inches(shape_data.get("start_y", 0))
+    end_x = Inches(shape_data.get("end_x", 2))
+    end_y = Inches(shape_data.get("end_y", 0))
+
+    # Calculate width and height from start/end points
+    left = min(start_x, end_x)
+    top = min(start_y, end_y)
+    width = abs(end_x - start_x)
+    height = abs(end_y - start_y)
+
+    # Use a line shape
+    from pptx.enum.shapes import MSO_CONNECTOR
+    connector = slide.shapes.add_connector(
+        MSO_CONNECTOR.STRAIGHT, start_x, start_y, end_x, end_y
+    )
+
+    # Line color
+    line_color = shape_data.get("line_color")
+    if line_color:
+        color = _parse_color(line_color)
+        if color:
+            connector.line.color.rgb = color
+
+    # Line width
+    line_width = shape_data.get("line_width", 1)
+    connector.line.width = Pt(line_width)

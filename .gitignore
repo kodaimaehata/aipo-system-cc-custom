@@ -1,0 +1,10 @@
+# Ignore per-project program repos (each is its own git repo under programs/)
+programs/*
+!programs/.gitkeep
+
+
+# Original aipo-system 
+src/aipo (AI-PO) system/*
+
+# OS junk
+.DS_Store

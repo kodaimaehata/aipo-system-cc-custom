@@ -40,6 +40,7 @@ python -m scripts.generate_pptx [OPTIONS]
 | content | array | - | 箇条書きコンテンツ |
 | table | object | - | 表データ |
 | image | string | - | 画像ファイルパス |
+| shapes | array | - | フリーフォーム図形配列（下記参照） |
 
 ### 表データ形式
 
@@ -68,6 +69,68 @@ python -m scripts.generate_pptx [OPTIONS]
 }
 ```
 
+### フリーフォーム図形（shapes配列）
+
+`layout: 6`（Blank）と`shapes`配列を使用して、図形・画像・テキストを自由に配置できます。
+
+```json
+{
+  "layout": 6,
+  "shapes": [
+    {
+      "type": "textbox",
+      "left": 1.0,
+      "top": 0.5,
+      "width": 8.0,
+      "height": 1.0,
+      "text": "カスタムタイトル",
+      "font_size": 32,
+      "bold": true,
+      "align": "center"
+    },
+    {
+      "type": "image",
+      "left": 1.5,
+      "top": 2.0,
+      "width": 4.0,
+      "path": "images/diagram.png"
+    },
+    {
+      "type": "shape",
+      "shape_type": "rectangle",
+      "left": 6.0,
+      "top": 2.0,
+      "width": 3.0,
+      "height": 2.0,
+      "fill_color": "#3366CC",
+      "text": "ボックス",
+      "font_color": "white"
+    }
+  ]
+}
+```
+
+#### shapesタイプ一覧
+
+| type | 説明 | 主なパラメータ |
+|------|------|---------------|
+| textbox | テキストボックス | left, top, width, height, text, font_size, bold, align, fill_color |
+| image | 画像 | left, top, path, width, height |
+| shape | 図形 | left, top, width, height, shape_type, fill_color, text, font_color |
+| table | 表 | left, top, width, headers, rows |
+| line | 線 | start_x, start_y, end_x, end_y, line_color, line_width |
+
+#### shape_type一覧
+
+`shape`タイプで使用可能な図形:
+- 基本: rectangle, rounded_rectangle, oval, circle, triangle
+- 矢印: right_arrow, left_arrow, up_arrow, down_arrow
+- その他: pentagon, hexagon, star, callout, cloud, heart, lightning
+
+#### 座標・サイズ単位
+
+すべての座標とサイズはインチ単位です。標準的なスライドサイズは10インチ×7.5インチです。
+
 ## レイアウトインデックス詳細
 
 | Index | Name | 説明 | 使用可能フィールド |
@@ -78,7 +141,7 @@ python -m scripts.generate_pptx [OPTIONS]
 | 3 | Two Content | 2カラム | title, content |
 | 4 | Comparison | 比較レイアウト | title, content |
 | 5 | Title Only | タイトルのみ | title, table, image |
-| 6 | Blank | 空白 | table, image |
+| 6 | Blank | 空白（フリーフォーム用） | shapes, table, image |
 | 7 | Content with Caption | キャプション付き | title, content |
 | 8 | Picture with Caption | 画像+キャプション | title, image |
 | 9 | Title and Vertical Text | 縦書き | title, content |

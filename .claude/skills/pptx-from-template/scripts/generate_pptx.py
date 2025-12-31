@@ -3,7 +3,7 @@
 
 Usage:
     python generate_pptx.py --template <template.pptx> --data <data.json> [--output <output.pptx>]
-    python generate_pptx.py --data <data.json> [--output <output.pptx>]  # Create new presentation
+    python generate_pptx.py --data <data.json> [--output <output.pptx>]  # Use default template or create new
 """
 
 import argparse
@@ -21,6 +21,10 @@ from .template_parser import (
     load_template,
     replace_placeholders,
 )
+
+# スキルディレクトリからの相対パスでデフォルトテンプレートを定義
+SKILL_DIR = Path(__file__).parent.parent
+DEFAULT_TEMPLATE_PATH = SKILL_DIR / "templates" / "default.pptx"
 
 
 class OutputError(Exception):
@@ -59,9 +63,16 @@ def generate_pptx(
     data = load_data(data_path)
     warnings = validate_data(data)
 
-    # Load or create presentation
+    # Determine template to use
+    effective_template = None
     if template_path:
-        prs = load_template(template_path)
+        effective_template = Path(template_path)
+    elif DEFAULT_TEMPLATE_PATH.exists():
+        effective_template = DEFAULT_TEMPLATE_PATH
+
+    # Load or create presentation
+    if effective_template:
+        prs = load_template(effective_template)
         # Handle placeholder mode vs slide generation mode
         if "placeholders" in data:
             # Placeholder replacement mode
@@ -209,16 +220,21 @@ Examples:
   # Use template with data
   python -m scripts.generate_pptx --template report.pptx --data data.json
 
-  # Create new presentation from data
+  # Use default template (templates/default.pptx)
   python -m scripts.generate_pptx --data data.json --output output.pptx
 
   # Overwrite existing file
   python -m scripts.generate_pptx --data data.json --output output.pptx --force
+
+Template priority:
+  1. --template specified path
+  2. templates/default.pptx (if exists)
+  3. Create new blank presentation
 """,
     )
     parser.add_argument(
         "--template", "-t",
-        help="Template .pptx file path (optional, creates new if not specified)",
+        help="Template .pptx file path (uses templates/default.pptx if not specified)",
     )
     parser.add_argument(
         "--data", "-d",

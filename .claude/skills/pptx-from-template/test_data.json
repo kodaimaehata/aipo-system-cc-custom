@@ -1,0 +1,46 @@
+{
+  "metadata": {
+    "title": "テストプレゼンテーション",
+    "author": "Claude Code",
+    "date": "2025-12-31"
+  },
+  "slides": [
+    {
+      "layout": 0,
+      "title": "pptx-from-template デモ",
+      "subtitle": "Claude Code Skill テスト"
+    },
+    {
+      "layout": 1,
+      "title": "機能一覧",
+      "content": [
+        "テンプレートからの生成",
+        "プレースホルダー置換",
+        "表データ対応",
+        "日本語完全対応"
+      ]
+    },
+    {
+      "layout": 5,
+      "title": "対応レイアウト",
+      "table": {
+        "headers": ["Index", "Name", "用途"],
+        "rows": [
+          ["0", "Title Slide", "タイトルページ"],
+          ["1", "Title and Content", "本文スライド"],
+          ["5", "Title Only", "タイトルのみ"],
+          ["6", "Blank", "空白"]
+        ]
+      }
+    },
+    {
+      "layout": 1,
+      "title": "まとめ",
+      "content": [
+        "python-pptx 1.0.2 使用",
+        "JSON/YAML データ対応",
+        "エラーハンドリング完備"
+      ]
+    }
+  ]
+}

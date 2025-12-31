@@ -143,10 +143,11 @@ def test_long_text():
         )
 
         assert result_path.exists()
-        # May have W004 warning for long content
+        # W004 warning should be present for long content (>500 chars)
+        has_w004 = any("W004" in w for w in warnings)
+        assert has_w004, f"W004警告が発生すべき: {warnings}"
         print(f"  ✓ PASS: {result_path}")
-        if warnings:
-            print(f"    警告: {warnings}")
+        print(f"    警告: {warnings}")
         return True
     except Exception as e:
         print(f"  ✗ FAIL: {e}")
@@ -365,6 +366,268 @@ def test_file_exists():
         os.unlink(output_path)
 
 
+def test_with_template():
+    """Test PPTX generation with existing template."""
+    print("\n=== テスト: テンプレート使用 ===")
+
+    # Use sample template from templates directory
+    script_dir = Path(__file__).parent.parent
+    template_path = script_dir / "templates" / "sample_template.pptx"
+
+    if not template_path.exists():
+        print(f"  ✗ SKIP: テンプレートが見つかりません: {template_path}")
+        return True  # Skip but don't fail
+
+    data = {
+        "slides": [
+            {"layout": 0, "title": "テンプレートテスト", "subtitle": "既存テンプレート使用"},
+            {"layout": 1, "title": "コンテンツ", "content": ["項目A", "項目B"]},
+        ]
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+        data_path = f.name
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pptx", delete=False) as f:
+            output_path = f.name
+
+        result_path, warnings, slide_info = generate_pptx(
+            template_path=str(template_path),
+            data_path=data_path,
+            output_path=output_path,
+            force=True,
+        )
+
+        assert result_path.exists(), "出力ファイルが存在しません"
+        assert len(slide_info) == 2, f"スライド数が不正: {len(slide_info)}"
+        print(f"  ✓ PASS: {result_path}")
+        return True
+    except Exception as e:
+        print(f"  ✗ FAIL: {e}")
+        return False
+    finally:
+        os.unlink(data_path)
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+
+
+def test_placeholder_replacement():
+    """Test placeholder replacement in template."""
+    print("\n=== テスト: プレースホルダー置換 ===")
+
+    # Use sample template
+    script_dir = Path(__file__).parent.parent
+    template_path = script_dir / "templates" / "sample_template.pptx"
+
+    if not template_path.exists():
+        print(f"  ✗ SKIP: テンプレートが見つかりません: {template_path}")
+        return True
+
+    data = {
+        "placeholders": {
+            "title": "置換後タイトル",
+            "subtitle": "置換後サブタイトル",
+        },
+        "slides": []
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+        data_path = f.name
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pptx", delete=False) as f:
+            output_path = f.name
+
+        result_path, warnings, slide_info = generate_pptx(
+            template_path=str(template_path),
+            data_path=data_path,
+            output_path=output_path,
+            force=True,
+        )
+
+        assert result_path.exists(), "出力ファイルが存在しません"
+        print(f"  ✓ PASS: {result_path}")
+        return True
+    except Exception as e:
+        print(f"  ✗ FAIL: {e}")
+        return False
+    finally:
+        os.unlink(data_path)
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+
+
+def test_freeform_shapes():
+    """Test free-form shapes (textbox, shape, line)."""
+    print("\n=== テスト: フリーフォーム図形 ===")
+
+    data = {
+        "slides": [
+            {
+                "layout": 6,  # Blank
+                "shapes": [
+                    {
+                        "type": "textbox",
+                        "left": 1.0,
+                        "top": 0.5,
+                        "width": 8.0,
+                        "height": 1.0,
+                        "text": "カスタムタイトル",
+                        "font_size": 32,
+                        "bold": True,
+                        "align": "center"
+                    },
+                    {
+                        "type": "shape",
+                        "shape_type": "rectangle",
+                        "left": 1.0,
+                        "top": 2.0,
+                        "width": 3.0,
+                        "height": 2.0,
+                        "fill_color": "#3366CC",
+                        "text": "青い四角形",
+                        "font_color": "white"
+                    },
+                    {
+                        "type": "shape",
+                        "shape_type": "oval",
+                        "left": 5.0,
+                        "top": 2.0,
+                        "width": 2.0,
+                        "height": 2.0,
+                        "fill_color": "red",
+                        "text": "円"
+                    },
+                    {
+                        "type": "textbox",
+                        "left": 1.0,
+                        "top": 5.0,
+                        "width": 8.0,
+                        "height": 1.0,
+                        "text": "説明テキスト：図形を自由に配置できます",
+                        "font_size": 14,
+                        "fill_color": "#EEEEEE"
+                    },
+                    {
+                        "type": "shape",
+                        "shape_type": "right_arrow",
+                        "left": 4.0,
+                        "top": 3.0,
+                        "width": 1.0,
+                        "height": 0.5,
+                        "fill_color": "green"
+                    }
+                ]
+            }
+        ]
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+        data_path = f.name
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pptx", delete=False) as f:
+            output_path = f.name
+
+        result_path, warnings, slide_info = generate_pptx(
+            template_path=None,
+            data_path=data_path,
+            output_path=output_path,
+            force=True,
+        )
+
+        assert result_path.exists(), "出力ファイルが存在しません"
+        assert len(slide_info) == 1, f"スライド数が不正: {len(slide_info)}"
+        print(f"  ✓ PASS: {result_path}")
+        if warnings:
+            print(f"    警告: {warnings}")
+        return True
+    except Exception as e:
+        print(f"  ✗ FAIL: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    finally:
+        os.unlink(data_path)
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+
+
+def test_freeform_table():
+    """Test free-form table at custom position."""
+    print("\n=== テスト: フリーフォーム表 ===")
+
+    data = {
+        "slides": [
+            {
+                "layout": 6,  # Blank
+                "shapes": [
+                    {
+                        "type": "textbox",
+                        "left": 0.5,
+                        "top": 0.5,
+                        "width": 9.0,
+                        "height": 0.8,
+                        "text": "カスタム位置の表",
+                        "font_size": 24,
+                        "bold": True
+                    },
+                    {
+                        "type": "table",
+                        "left": 0.5,
+                        "top": 1.5,
+                        "width": 5.0,
+                        "headers": ["項目", "値", "備考"],
+                        "rows": [
+                            ["A", "100", "テスト"],
+                            ["B", "200", "サンプル"]
+                        ]
+                    },
+                    {
+                        "type": "textbox",
+                        "left": 6.0,
+                        "top": 1.5,
+                        "width": 3.5,
+                        "height": 2.0,
+                        "text": "表の横に配置された\n説明テキスト",
+                        "font_size": 12
+                    }
+                ]
+            }
+        ]
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+        data_path = f.name
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pptx", delete=False) as f:
+            output_path = f.name
+
+        result_path, warnings, slide_info = generate_pptx(
+            template_path=None,
+            data_path=data_path,
+            output_path=output_path,
+            force=True,
+        )
+
+        assert result_path.exists(), "出力ファイルが存在しません"
+        print(f"  ✓ PASS: {result_path}")
+        return True
+    except Exception as e:
+        print(f"  ✗ FAIL: {e}")
+        return False
+    finally:
+        os.unlink(data_path)
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+
+
 def main():
     """Run all integration tests."""
     print("=" * 60)
@@ -377,6 +640,10 @@ def main():
         ("長文テキスト", test_long_text),
         ("空データ", test_empty_data),
         ("特殊文字", test_special_characters),
+        ("テンプレート使用", test_with_template),
+        ("プレースホルダー置換", test_placeholder_replacement),
+        ("フリーフォーム図形", test_freeform_shapes),
+        ("フリーフォーム表", test_freeform_table),
         ("テンプレート不存在", test_nonexistent_template),
         ("無効なJSON", test_invalid_json),
         ("データファイル不存在", test_nonexistent_data),
