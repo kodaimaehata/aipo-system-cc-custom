@@ -37,7 +37,7 @@ Ensure you have the following information. If missing, ask the user:
 2. If the target directory already exists, **ask before modifying/overwriting**.
 3. **Subdirectories**: `sublayers/`, `documents/`, `context/`, `commands/`.
    - (Recommended) If available, prefer initializing a new program via:
-     - `python3 .codex/skills/aipo-workflow/scripts/init_program.py --project "<project_name>" --goal "<goal>" --preset general --no-git-init`
+     - `python3 .claude/scripts/init_program.py --project "<project_name>" --goal "<goal>" --preset general --no-git-init`
 
 ### Phase 3: Layer Initialization
 Create the following files in the layer directory:

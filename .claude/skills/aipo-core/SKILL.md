@@ -44,7 +44,7 @@ programs/
 ### 3. Data Schemas
 
 #### layer.yaml
-`layer.yaml` / `context.yaml` / `tasks.yaml` should be written as **JSON-compatible YAML (= pure JSON)** for compatibility with `.codex/skills/aipo-workflow/scripts/validate_program.py`.
+`layer.yaml` / `context.yaml` / `tasks.yaml` should be written as **JSON-compatible YAML (= pure JSON)** for compatibility with `.claude/scripts/validate_program.py`.
 
 ```json
 {
