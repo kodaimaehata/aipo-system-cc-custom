@@ -25,6 +25,7 @@
 ├── aipo-focus/       # Focus フェーズ（分解して tasks.yaml 更新）
 ├── aipo-discover/    # Discover フェーズ（commands 雛形生成＋テンプレ適用）
 ├── aipo-deliver/     # Deliver フェーズ（タスク実行＋status更新）
+├── aipo-operation/   # Operation フェーズ（週次レビュー/棚卸しレポート生成）
 └── aipo-workflow/    # エンジン（scripts + references）
 ```
 
@@ -136,18 +137,19 @@ programs/<project名>/ を再開して、現状と次のアクションを提案
 生成される成果物:
 - 原則は「状況レポート（テキスト）」が中心。必要に応じて `programs/<project>/` 配下の `.yaml` を修正/補完する。
 
-### ユースケース7: aipo-workflow（週次レビュー / 棚卸し）
+### ユースケース7: aipo-operation（週次レビュー / 棚卸し）
 プロンプト例:
 ```
-$aipo-workflow
+$aipo-operation
 programs/<project名>/ の週次レビュー（棚卸し）をして、次の1週間の推奨プランを出して。
 ```
 
 実行すると何が起こるか:
-- 完了/未完了/高優先度SubLayerの整理、ブロッカーの列挙、次の1週間の推奨プラン（最大5項目）を提示する。
+- 完了/未完了/高優先度SubLayerの整理、ブロッカーの列挙、次の1週間の推奨プラン（最大5項目）をまとめた週次レポートを生成する。
+- 可能な範囲で、タスクの `estimate` から ETA（90%レンジ）を算出する（不足時は信頼係数を併記）。
 
 生成される成果物:
-- 原則は「レビュー結果（テキスト）」が中心。必要なら `documents/` に週次レポートを保存する提案/作成を行う。
+- `programs/<project>/weekly_review/weekly_review_YYYY-MM-DD.md`: ゴール / レイヤー構造 / 各レイヤーのタスク進捗（成果物リンク付き）/ ETA を含む週次レポート
 
 ### 参照（スキーマ/ルール）
 
@@ -156,6 +158,7 @@ programs/<project名>/ の週次レビュー（棚卸し）をして、次の1�
 - 新規事業ディスカバリーの分解テンプレ: `.codex/skills/aipo-workflow/references/discovery-playbook.md`
 - 対象レイヤーの解決ルール: `.codex/skills/aipo-core/references/layer-directory-resolution.md`
 - command_template_ref の辿り方: `.codex/skills/aipo-workflow/references/command-templates.md`
+- 週次レポートのフォーマット: `.codex/skills/aipo-operation/references/report-format.md`
 
 ### 注意（YAML形式）
 
@@ -259,6 +262,6 @@ Claude Code ではスラッシュコマンドで各フェーズを実行でき�
 |------|-----------|-------------|
 | スキル配置場所 | `.codex/skills/` | `.claude/skills/` |
 | トリガー | `$aipo-sense` 等のスキルプレフィックス（または自然言語） | `/sense`、`/focus` 等のスラッシュコマンド |
-| スキル構造 | コア + フェーズ別 + エンジン（`aipo-core`/`aipo-sense`…/`aipo-workflow`） | フェーズ別スキル（`aipo-sense`、`aipo-focus` 等） |
+| スキル構造 | コア + フェーズ別 + エンジン（`aipo-core`/`aipo-sense`…/`aipo-operation`/`aipo-workflow`） | フェーズ別スキル（`aipo-sense`、`aipo-focus` 等） |
 | コマンド定義 | スキル内に統合 | `.claude/commands/` に分離 |
-| Operation | テンプレで対応 | 未実装（手動依頼） |
+| Operation | `aipo-operation` で週次レポート生成 | 未実装（手動依頼） |
