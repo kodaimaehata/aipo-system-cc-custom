@@ -267,6 +267,8 @@ def _i18n(lang: str) -> dict[str, str]:
             "eta_label": "ETA: {eta}",
             "coverage_label": "Estimate coverage: {coverage}",
             "coverage_note": "Note: Some tasks are missing estimates; ETA precision is reduced.",
+            "docs_label": "docs",
+            "dir_label": "dir",
             "layer_table_header": "| Depth | Layer | Purpose | Work Summary | Final Deliverable | Path |",
             "layer_table_sep": "|---:|---|---|---|---|---|",
             "tasks_table_header": "| Task | Type | Status | Estimate | Command | Deliverables |",
@@ -280,10 +282,12 @@ def _i18n(lang: str) -> dict[str, str]:
         "project_structure": "プロジェクトの全体構造",
         "progress": "プロジェクトの進捗",
         "eta": "プロジェクトのETA（90%）",
-        "eta_missing": "ETA: —（estimate が不足しているため算出不可）",
+        "eta_missing": "ETA: —（見積が不足しているため算出不可）",
         "eta_label": "ETA: {eta}",
-        "coverage_label": "信頼係数（estimate coverage）: {coverage}",
-        "coverage_note": "注: estimate が未設定のタスクがあるため、レンジの精度は低下します。",
+        "coverage_label": "信頼係数（見積カバー率）: {coverage}",
+        "coverage_note": "注: 見積が未設定のタスクがあるため、レンジの精度は低下します。",
+        "docs_label": "文書",
+        "dir_label": "フォルダ",
         "layer_table_header": "| 階層 | レイヤー | 目的 | 作業概要 | 最終成果物 | パス |",
         "layer_table_sep": "|---:|---|---|---|---|---|",
         "tasks_table_header": "| タスク | 種別 | ステータス | 見積 | コマンド | 成果物 |",
@@ -352,6 +356,42 @@ def _short_task_name(name: str, *, max_len: int = 48) -> str:
     if len(s) > max_len:
         s = s[: max_len - 1].rstrip() + "…"
     return s
+
+
+def _strip_parenthetical(text: str) -> str:
+    # Remove simple parenthetical notes from task names to keep summaries compact.
+    s = text
+    s = re.sub(r"（[^）]*）", "", s)
+    s = re.sub(r"\([^)]*\)", "", s)
+    return s
+
+
+def _task_object_phrase(name: str, *, lang: str) -> str:
+    s = _strip_parenthetical(name or "").strip()
+    s = re.sub(r"\s+", " ", s)
+    if not s:
+        return ""
+
+    if lang == "ja":
+        # Common pattern: "<object>を<verb>する"
+        if "を" in s:
+            left = s.split("を", 1)[0].strip()
+            if left:
+                return left
+        # Otherwise, keep it mostly as-is (avoid over-aggressive stripping that harms meaning),
+        # but remove trailing "する/します" so it fits naturally in summaries.
+        core = _short_task_name(s, max_len=72)
+        core2 = re.sub(r"(します|する)$", "", core).strip()
+        return core2 or core
+
+    # English-ish: remove leading verb
+    s2 = re.sub(
+        r"^(define|implement|create|decide|confirm|test|review|write|update|refactor|design|plan)\b[:\s-]*",
+        "",
+        s,
+        flags=re.IGNORECASE,
+    ).strip()
+    return (s2 or s).strip()
 
 
 def _infer_work_categories(layer: "LayerInfo", *, lang: str) -> list[str]:
@@ -454,30 +494,45 @@ def _summarize_layer_tasks(layer: LayerInfo, *, lang: str, labels: dict[str, str
     if not layer.tasks:
         return labels["work_empty"]
 
-    cats = _infer_work_categories(layer, lang=lang)
-    if cats:
-        if len(cats) == 1:
+    # Prefer summarizing what we do (task content) in 1–2 sentences without a raw checklist.
+    phrases: list[str] = []
+    for t in layer.tasks:
+        p = _task_object_phrase(t.name or "", lang=lang)
+        if p:
+            phrases.append(p)
+
+    # Dedup while preserving order.
+    seen: set[str] = set()
+    uniq: list[str] = []
+    for p in phrases:
+        if p not in seen:
+            uniq.append(p)
+            seen.add(p)
+
+    top = uniq[:3]
+    if not top:
+        cats = _infer_work_categories(layer, lang=lang)
+        if cats:
             if lang == "ja":
                 sentence = f"{cats[0]}を進め、目的に沿った成果物を整える。"
             else:
                 sentence = f"Advance {cats[0]} to produce the outputs needed for this layer’s goal."
         else:
-            if lang == "ja":
-                sentence = f"{cats[0]}を軸に、{cats[1]}まで進めて成果物を整える。"
-            else:
-                sentence = f"Advance {cats[0]} and {cats[1]} to produce the outputs needed for this layer’s goal."
-    else:
-        # Fallback: mention one concrete task as an example, without listing.
-        example = ""
-        for t in layer.tasks:
-            n = _short_task_name(t.name or "")
-            if n:
-                example = n
-                break
-        if lang == "ja":
-            sentence = f"{example}などを進め、目的達成に必要な作業を具体化する。" if example else "目的達成に必要な作業を具体化する。"
+            sentence = labels["work_empty"]
+    elif lang == "ja":
+        if len(top) == 1:
+            sentence = f"{top[0]}を進め、目的に沿った成果物を整える。"
+        elif len(top) == 2:
+            sentence = f"{top[0]}と{top[1]}を進め、目的に沿った成果物を整える。"
         else:
-            sentence = f"Progress items like {example} to clarify the work needed for this layer’s goal." if example else "Clarify the work needed for this layer’s goal."
+            sentence = f"{top[0]}と{top[1]}を中心に、{top[2]}も含めて目的に沿った成果物を整える。"
+    else:
+        if len(top) == 1:
+            sentence = f"Progress {top[0]} to produce the outputs needed for this layer’s goal."
+        elif len(top) == 2:
+            sentence = f"Progress {top[0]} and {top[1]} to produce the outputs needed for this layer’s goal."
+        else:
+            sentence = f"Progress {top[0]} and {top[1]}, and address {top[2]} to produce the outputs needed for this layer’s goal."
 
     # Keep cells compact.
     max_len = 140
@@ -875,10 +930,10 @@ def _render_layer_structure_table(from_dir: Path, layers: list[LayerInfo], label
         if node.documents:
             # Keep it short: show up to 3 file links, plus a link to the documents dir.
             doc_links = _fmt_paths_as_links(from_dir, node.documents[:3])
-            deliverable_parts.append(f"docs: {doc_links}")
+            deliverable_parts.append(f"{labels['docs_label']}: {doc_links}")
             if node.documents_dir is not None and node.documents_dir.is_dir():
                 rel_docs_dir = _relpath(from_dir, node.documents_dir)
-                deliverable_parts.append(f"dir: {_md_link(rel_docs_dir, rel_docs_dir)}")
+                deliverable_parts.append(f"{labels['dir_label']}: {_md_link(rel_docs_dir, rel_docs_dir)}")
 
         deliverable = "<br>".join(deliverable_parts) if deliverable_parts else labels["dash"]
         rel = _relpath(from_dir, node.path)
@@ -932,7 +987,7 @@ def _collect_all_tasks(layers: list[LayerInfo]) -> list[TaskRow]:
 def _compute_eta_90(tasks: list[TaskRow]) -> tuple[str, float] | None:
     remaining: list[TaskRow] = [t for t in tasks if not _task_status_is_done(t.status)]
     if not remaining:
-        return ("0h (no remaining tasks)", 1.0)
+        return ("0h", 1.0)
 
     known = [t for t in remaining if isinstance(t.estimate_hours, (int, float))]
     coverage = len(known) / len(remaining) if remaining else 1.0
@@ -962,7 +1017,7 @@ def _compute_eta_90(tasks: list[TaskRow]) -> tuple[str, float] | None:
             return f"{h/8.0:.1f}d ({h:.1f}h)"
         return f"{h:.1f}h"
 
-    return (f"{fmt_hours(low)} – {fmt_hours(high)} (90% interval)", coverage)
+    return (f"{fmt_hours(low)} – {fmt_hours(high)}", coverage)
 
 
 def _render_report(base_dir: Path, layers: list[LayerInfo], *, lang: str) -> str:

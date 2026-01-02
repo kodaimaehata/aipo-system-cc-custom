@@ -84,6 +84,14 @@ def generate_pptx(
     slides = data.get("slides", [])
     slide_info = []
 
+    # If generating slides from data, remove existing template slides
+    if slides and effective_template:
+        # Remove all existing slides
+        while len(prs.slides) > 0:
+            slide_id = prs.slides._sldIdLst[0].rId
+            prs.part.drop_rel(slide_id)
+            del prs.slides._sldIdLst[0]
+
     for i, slide_data in enumerate(slides, 1):
         add_slide_from_data(prs, slide_data, warnings)
 

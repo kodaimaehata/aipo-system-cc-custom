@@ -170,6 +170,13 @@ def add_slide_from_data(prs: Presentation, slide_data: dict[str, Any], warnings:
     if "shapes" in slide_data:
         _add_shapes_to_slide(slide, slide_data["shapes"], warnings)
 
+    # Add speaker notes
+    if "notes" in slide_data:
+        notes_text = str(slide_data["notes"])
+        if notes_text:
+            notes_slide = slide.notes_slide
+            notes_slide.notes_text_frame.text = notes_text
+
 
 def _add_table_to_slide(slide, table_data: dict[str, Any], warnings: list[str]) -> None:
     """Add a table to the slide.

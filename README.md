@@ -179,7 +179,8 @@ Claude Code では `.claude/` ディレクトリにスキルとコマンドが�
 │   ├── focus.md           # /focus - ゴールをタスクに分解
 │   ├── discover.md        # /discover - 実行コマンド生成
 │   ├── deliver.md         # /deliver - タスク実行
-│   └── operation.md       # /operation - 週次レビュー/棚卸しレポート生成
+│   ├── operation.md       # /operation - 週次レビュー/棚卸しレポート生成
+│   └── codex_review.md    # /codex_review - Codex CLIでレビューしてレポート保存
 ├── skills/                # 各フェーズのスキル定義
 │   ├── aipo-core/         # コアスキーマ・ルール
 │   ├── aipo-sense/        # Sense フェーズ
@@ -187,6 +188,7 @@ Claude Code では `.claude/` ディレクトリにスキルとコマンドが�
 │   ├── aipo-discover/     # Discover フェーズ
 │   ├── aipo-deliver/      # Deliver フェーズ
 │   ├── aipo-operation/    # Operation フェーズ（週次レビュー/棚卸し）
+│   ├── codex-review/      # Codex CLIレビュー（自動で code/doc を判定）
 │   └── pptx-from-template/ # PowerPoint生成スキル（追加機能）
 ├── scripts/               # ヘルパースクリプト
 │   ├── init_program.py    # プロジェクト初期化
@@ -273,6 +275,14 @@ Claude Code ではスラッシュコマンドで各フェーズを実行でき�
 
 フォーマット仕様:
 - `.claude/skills/aipo-operation/references/report-format.md`
+
+#### Codexレビュー（Claude → Codex CLI）
+
+```
+/codex_review [RepoOrLayerPath] [lang: ja|en]
+```
+
+→ コード変更が含まれる場合は差分レビュー（`git diff` を参照してレビュー）、ドキュメント中心の場合はプロンプトで対象/観点を指定して `codex exec` を使い、レビュー結果をMarkdownで保存する。
 
 ### Codex CLI との違い
 

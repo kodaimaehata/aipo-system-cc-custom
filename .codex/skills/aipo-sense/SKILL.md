@@ -50,3 +50,54 @@ python3 .codex/skills/aipo-workflow/scripts/sync_sublayers.py --path "<parent_la
 python3 .codex/skills/aipo-workflow/scripts/validate_program.py --path "<layer_dir>"
 ```
 
+## 6) 実行結果をユーザーに報告する（必須）
+
+Sense 実行後、ユーザーへの最終返信は **以下のフォーマット**に揃える（内容は実際に作成/更新したものに合わせて調整する）。
+
+### 出力テンプレート
+
+```text
+Sense Phase 完了
+
+プロジェクト <project_name> を初期化しました。
+# 既存 Layer の場合: レイヤー <layer_dir> のコンテキストを更新しました。
+# SubLayer の場合: SubLayer <layer_dir> を初期化しました。
+
+作成されたディレクトリ構造
+
+<layer_dir>/
+├── layer.yaml           # レイヤー定義（ゴール・成功基準）
+├── context.yaml         # コンテキストインデックス
+├── tasks.yaml           # タスク計画（Focus phaseで更新）
+├── context/
+│   ├── <doc1>.md        # <要約>
+│   └── <doc2>.md        # <要約>
+├── documents/           # 成果物（レポート等）
+├── commands/            # タスク実行コマンド
+└── sublayers/           # サブレイヤー
+
+収集したコンテキスト（context.yaml）
+
+| ドキュメント | 内容 |
+|---|---|
+| <doc1>.md | <要約> |
+| <doc2>.md | <要約> |
+
+成功基準（layer.yaml）
+
+1. <success_criteria_1>
+2. <success_criteria_2>
+3. ...
+
+---
+次のステップ
+
+/focus を実行して、ゴールをサブレイヤーとタスクに分解してください。
+```
+
+### 生成ルール（必須）
+
+- `<layer_dir>` とツリーは **実在するパス/構造**に合わせる（存在しないファイルは書かない）。
+- 「収集したコンテキスト」は `context.yaml.context_documents[]` を優先して表にする（`path` と `summary`）。
+- 「成功基準」は `layer.yaml.goal.success_criteria[]` をそのまま列挙する（無い場合は `layer.yaml.goal` から補う）。
+- 「次のステップ」は原則 `/focus`（ユーザーが別フェーズを指定している場合のみ従う）。

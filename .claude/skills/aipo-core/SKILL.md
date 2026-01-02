@@ -69,20 +69,45 @@ programs/
 #### context.yaml
 ```json
 {
-  "version": "1.0",
+  "version": "1.1",
   "project_name": "example-project",
   "layer_id": "L001",
   "generated_at": "YYYY-MM-DD",
   "parent_context_dir": null,
+  "context_collection": {
+    "methods": ["local_workspace", "web_search", "external_paths"],
+    "local_workspace_config": {
+      "priority_folders": [],
+      "perspectives": []
+    },
+    "web_search_config": {
+      "prefer_primary_sources": true,
+      "keywords": []
+    },
+    "external_paths_config": {
+      "paths": []
+    },
+    "collected_at": "YYYY-MM-DD",
+    "confirmed_by": "user"
+  },
   "context_documents": [
     {
       "name": "Team",
       "path": "context/01_team.md",
-      "summary": "Who is involved and roles"
+      "summary": "Who is involved and roles",
+      "source_method": "local_workspace"
     }
   ]
 }
 ```
+
+**`context_collection` Field (Optional):**
+- `methods`: Array of collection method IDs (`local_workspace`, `web_search`, `external_paths`)
+- `*_config`: Configuration for each selected method
+- `confirmed_by`: Who confirmed the selection (`user`, `ai`, or `cli`)
+
+**`source_method` in context_documents (Optional):**
+- Tracks which collection method produced each document
 
 #### tasks.yaml
 ```json

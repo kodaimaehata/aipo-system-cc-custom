@@ -20,6 +20,18 @@ description: "Core schemas, directory layout, and operating rules for the AIPO (
   - `programs/` 構造と schema: `.codex/skills/aipo-workflow/references/program-schema.md`
   - フェーズ運用: `.codex/skills/aipo-workflow/references/workflow.md`
 
+## Context Collection Methods（v1.1）
+
+Senseフェーズで使用可能なコンテキスト収集方法:
+
+| ID | 名称 | 説明 |
+|----|------|------|
+| `local_workspace` | ローカル検索（ワークスペース） | ワークスペース内のGoal関連情報を検索 |
+| `web_search` | Web検索 | インターネットからGoal関連情報を収集 |
+| `external_paths` | ローカル検索（指定フォルダ） | ユーザー指定フォルダ/ファイルから収集 |
+
+`context.yaml` の `context_collection` フィールドに選択結果を記録する（詳細は `program-schema.md` 参照）。
+
 ## JSON-Compatible YAML（必須）
 
 - `layer.yaml` / `context.yaml` / `tasks.yaml` は **JSON互換YAML（=純JSON）** として扱う（ダブルクオート、末尾カンマなし、`null/true/false`）。
