@@ -9,7 +9,7 @@ import signal
 import subprocess
 import tempfile
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 
@@ -19,6 +19,11 @@ class CodexReviewError(Exception):
 
 def _today_iso() -> str:
     return date.today().isoformat()
+
+
+def _now_iso() -> str:
+    """Return current datetime in YYYY-MM-DD_HH-MM-SS format (filesystem safe)."""
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 def _contains_japanese(text: str) -> bool:
@@ -525,14 +530,14 @@ def _report_preamble(
     review_mode: str,
     scope: str,
     excluded: tuple[tuple[str, str], ...],
+    timestamp: str,
 ) -> str:
-    today = _today_iso()
     excluded_text = _format_excluded(excluded, lang=lang)
     if lang == "ja":
         note = f"（{method_note}）" if method_note else ""
         return (
-            f"# Codex レビュー ({today})\n\n"
-            f"- 日付: `{today}`\n"
+            f"# Codex レビュー ({timestamp})\n\n"
+            f"- 日時: `{timestamp}`\n"
             f"- 対象: `{repo_dir}`\n"
             f"- 方式: `{method_cmd}`{note}\n"
             f"- レビューモード: `{review_mode}`\n"
@@ -541,8 +546,8 @@ def _report_preamble(
         )
     note = f" ({method_note})" if method_note else ""
     return (
-        f"# Codex Review ({today})\n\n"
-        f"- date: `{today}`\n"
+        f"# Codex Review ({timestamp})\n\n"
+        f"- datetime: `{timestamp}`\n"
         f"- repo/layer: `{repo_dir}`\n"
         f"- method: `{method_cmd}`{note}\n"
         f"- review_mode: `{review_mode}`\n"
@@ -627,7 +632,8 @@ def main() -> int:
         return 0
 
     out_dir = _output_dir(repo_dir)
-    out_path = _unique_output_path(out_dir, stem=f"codex_review_{_today_iso()}")
+    timestamp = _now_iso()
+    out_path = _unique_output_path(out_dir, stem=f"codex_review_{timestamp}")
 
     runlog: list[tuple[str, str | None]] = []
 
@@ -640,6 +646,7 @@ def main() -> int:
             review_mode=args.mode,
             scope=str(repo_dir),
             excluded=changed.excluded,
+            timestamp=timestamp,
         )
         report += _runlog_section(lang, runlog)
         report += body
