@@ -65,6 +65,9 @@ class InitArgs:
     deadline: str | None
     overwrite: bool
     git_init: bool
+    context_methods: list[str] | None
+    priority_folders: list[str] | None
+    external_paths: list[str] | None
 
 
 def _build_layer_yaml(args: InitArgs, *, layer_id: str) -> dict:
@@ -85,8 +88,8 @@ def _build_layer_yaml(args: InitArgs, *, layer_id: str) -> dict:
 
 
 def _build_context_yaml(args: InitArgs, *, layer_id: str) -> dict:
-    return {
-        "version": "1.0",
+    base = {
+        "version": "1.1",
         "project_name": args.project_name,
         "layer_id": layer_id,
         "generated_at": _today_iso(),
@@ -104,6 +107,35 @@ def _build_context_yaml(args: InitArgs, *, layer_id: str) -> dict:
             },
         ],
     }
+
+    # Add context_collection if methods are specified
+    if args.context_methods:
+        context_collection: dict = {
+            "methods": args.context_methods,
+            "collected_at": None,
+            "confirmed_by": "cli",
+        }
+
+        if "local_workspace" in args.context_methods:
+            context_collection["local_workspace_config"] = {
+                "priority_folders": args.priority_folders or [],
+                "perspectives": [],
+            }
+
+        if "web_search" in args.context_methods:
+            context_collection["web_search_config"] = {
+                "prefer_primary_sources": True,
+                "keywords": [],
+            }
+
+        if "external_paths" in args.context_methods:
+            context_collection["external_paths_config"] = {
+                "paths": args.external_paths or [],
+            }
+
+        base["context_collection"] = context_collection
+
+    return base
 
 
 def _build_tasks_yaml(args: InitArgs, *, layer_id: str) -> dict:
@@ -150,9 +182,38 @@ def main() -> int:
         default=True,
         help="Initialize a git repository under programs/{project}.",
     )
+    parser.add_argument(
+        "--context-methods",
+        default=None,
+        help="Comma-separated context collection methods: local_workspace,web_search,external_paths",
+    )
+    parser.add_argument(
+        "--priority-folders",
+        default=None,
+        help="Comma-separated priority folders for local_workspace (e.g., 'src/,docs/')",
+    )
+    parser.add_argument(
+        "--external-paths",
+        default=None,
+        help="Comma-separated external paths for external_paths method",
+    )
     args_ns = parser.parse_args()
 
     project_name = _safe_dir_name(args_ns.project)
+
+    # Parse comma-separated values
+    context_methods = None
+    if args_ns.context_methods:
+        context_methods = [m.strip() for m in args_ns.context_methods.split(",") if m.strip()]
+
+    priority_folders = None
+    if args_ns.priority_folders:
+        priority_folders = [f.strip() for f in args_ns.priority_folders.split(",") if f.strip()]
+
+    external_paths = None
+    if args_ns.external_paths:
+        external_paths = [p.strip() for p in args_ns.external_paths.split(",") if p.strip()]
+
     args = InitArgs(
         project_name=project_name,
         layer_name=args_ns.layer_name,
@@ -163,6 +224,9 @@ def main() -> int:
         deadline=args_ns.deadline,
         overwrite=args_ns.overwrite,
         git_init=args_ns.git_init,
+        context_methods=context_methods,
+        priority_folders=priority_folders,
+        external_paths=external_paths,
     )
 
     base_dir = Path("programs") / args.project_name

@@ -98,29 +98,62 @@ programs/{project名}/
 - `generated_at`
 - `context_documents[]`（`path` と `summary` を持つ）
 
+オプションフィールド（v1.1）:
+- `context_collection` - コンテキスト収集方法の設定
+- `context_documents[].source_method` - 各ドキュメントの収集元
+
 例:
 
 ```json
 {
-  "version": "1.0",
+  "version": "1.1",
   "project_name": "example-project",
   "layer_id": "L001",
   "generated_at": "2025-12-29",
   "parent_context_dir": null,
+  "context_collection": {
+    "methods": ["local_workspace", "web_search"],
+    "local_workspace_config": {
+      "priority_folders": ["src/", "docs/"],
+      "perspectives": ["technical", "business"]
+    },
+    "web_search_config": {
+      "prefer_primary_sources": true,
+      "keywords": []
+    },
+    "external_paths_config": {
+      "paths": []
+    },
+    "collected_at": "2025-12-29",
+    "confirmed_by": "user"
+  },
   "context_documents": [
     {
       "name": "Overview",
       "path": "context/01_overview.md",
-      "summary": "背景・目的・スコープの要約"
+      "summary": "背景・目的・スコープの要約",
+      "source_method": "local_workspace"
     },
     {
       "name": "Constraints",
       "path": "context/02_constraints.md",
-      "summary": "制約（期限・予算・技術・法務など）"
+      "summary": "制約（期限・予算・技術・法務など）",
+      "source_method": "local_workspace"
     }
   ]
 }
 ```
+
+### `context_collection` フィールド詳細
+
+| フィールド | 説明 |
+|-----------|------|
+| `methods` | 選択された収集方法の配列: `local_workspace`, `web_search`, `external_paths` |
+| `local_workspace_config` | ワークスペース検索の設定（優先フォルダ、検索観点） |
+| `web_search_config` | Web検索の設定（一次情報優先、キーワード） |
+| `external_paths_config` | 外部パスの設定（対象パス一覧） |
+| `collected_at` | 収集実行日（ISO日付） |
+| `confirmed_by` | 選択確認者（`user`, `ai`, `cli`）|
 
 ## `tasks.yaml`（タスク分解 + コマンド生成設定）
 
