@@ -31,13 +31,18 @@ Ensure you have the following information. If missing, ask the user:
   - For a program root layer, this is typically `programs/{project_name}`.
 
 ### Phase 2: Structure Creation
-1. **Resolve the target layer directory** (see `aipo-core` “Layer Directory Resolution”):
+1. **Resolve the target layer directory** (see `aipo-core` "Layer Directory Resolution"):
    - **Root Layer (Program Root)**: `programs/[project_name]/`
    - **SubLayer**: `[ParentLayerDir]/sublayers/[LayerName]/`
 2. If the target directory already exists, **ask before modifying/overwriting**.
 3. **Subdirectories**: `sublayers/`, `documents/`, `context/`, `commands/`.
-   - (Recommended) If available, prefer initializing a new program via:
-     - `python3 .claude/scripts/init_program.py --project "<project_name>" --goal "<goal>" --preset general --no-git-init`
+4. **(Recommended) Initialize via script** (run from repo root):
+   ```bash
+   python3 .claude/scripts/init_program.py --project "{project_name}" --goal "{goal}" --preset general
+   ```
+   - **Git initialization**: The script runs `git init` by default (to treat `programs/{project_name}/` as an independent repository).
+   - To skip Git initialization, add `--no-git-init`.
+   - The parent repository's `.gitignore` excludes `programs/*`, which helps prevent accidentally committing nested repositories.
 
 ### Phase 3: Layer Initialization
 Create the following files in the layer directory:
