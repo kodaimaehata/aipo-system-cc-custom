@@ -1,5 +1,6 @@
 # Ignore per-project program repos (each is its own git repo under programs/)
 programs/*
+flows/*
 
 
 
