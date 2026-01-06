@@ -9,8 +9,9 @@ description: Run Codex CLI as a reviewer from Claude Code and save the review re
 
 ## 自動判定（重要）
 
-- **コード変更が含まれる**場合: 差分レビュー（Codex が `git diff` を参照してレビュー）を優先
-- **ドキュメント等（md/yaml/json中心）**の場合: 対象ファイルと観点をプロンプトに含めて `codex exec` でレビュー（対象を絞れる）
+- **デフォルト（主にドキュメント等（md/yaml/json中心）**の場合を想定）: 対象ファイルと観点をプロンプトに含めて `codex exec` でレビュー（対象を絞れる）
+- **ユーザーからコード変更に対するレビューを指示された**場合: 差分レビュー（Codex が `git diff` を参照してレビュー）を優先
+
 
 ## 実行（推奨: script）
 
