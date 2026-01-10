@@ -1,64 +1,93 @@
 ---
 name: codex-review
-description: Run Codex CLI as a reviewer from Claude Code and save the review report. Automatically chooses the best method (code review vs document review) based on what changed.
+description: Run Codex CLI as a reviewer from Claude Code and save the review report.
 ---
 
 # Codex Review（Claude Code）
 
-目的: Claude Code の作業結果（差分/成果物）に対して Codex CLI のレビューを実行し、レポートを保存する。
+目的: Claude Code の作業結果に対して Codex CLI のレビューを実行し、レポートを保存する。
 
-## 自動判定（重要）
+## 実行方法
 
-- **デフォルト（主にドキュメント等（md/yaml/json中心）**の場合を想定）: 対象ファイルと観点をプロンプトに含めて `codex exec` でレビュー（対象を絞れる）
-- **ユーザーからコード変更に対するレビューを指示された**場合: 差分レビュー（Codex が `git diff` を参照してレビュー）を優先
-
-
-## 実行（推奨: script）
+Claude Code がプロンプトとファイルリストを渡してスクリプトを実行する:
 
 ```bash
-python3 .claude/skills/codex-review/scripts/codex_review.py --path "<repo_or_layer_dir>" --lang <ja|en>
+python3 .claude/skills/codex-review/scripts/codex_review.py \
+  --path "<repo>" \
+  --lang <ja|en> \
+  --files file1.py file2.js ... \
+  --prompt - <<'EOF'
+<生成したプロンプト>
+EOF
 ```
 
-## 出力フォーマット（重要）
+## Claude Code の責務
 
-- `--lang ja` の場合、見出し/固定ラベルは **日本語**に統一する（例: `概要`, `質問`, `次のアクション（提案）`）。
-- `--lang en` の場合、英語に統一する。
+1. **変更の意図を分析** - このセッションで何を行ったかを振り返る
+2. **レビュープロンプトを生成** - 下記ガイドラインに従う
+3. **対象ファイルを特定** - 変更したファイル、関連ファイルをリストアップ
+4. **スクリプトを実行** - 上記コマンドを実行
 
-## 安全策（重要）
+### プロンプト生成ガイドライン
 
-- Never include（常に除外）:
-  - `.env*`, `.secrets*`, `settings.local.json`
-  - `.npmrc`, `.netrc`
-  - `secrets/`（または `.secrets/`）配下
-  - `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.crt` 等
-  - SSH鍵/known_hosts 等（`id_rsa*`, `id_ed25519*`, `authorized_keys`, `known_hosts`）
-  - `*.tfstate*`, `*.sqlite*`, `*.db`
-  - `**/.git/**`
-  - `node_modules/`, `dist/`, `build/`, `.venv/`
-- prompt-based 入力では、代表的な秘密値を簡易マスキングする（例: private key ブロック / `sk-` / `ghp_` / `github_pat_` / `xox*` / `AKIA` / JWT / `Bearer ...`）。
+以下を含むプロンプトを生成する:
 
-## オプション（抜粋）
+1. **変更の意図** - 何を達成しようとした変更か
+2. **レビュー観点** - 特に確認してほしいポイント
+3. **出力フォーマット** - 必要なセクション構造
 
-- `--method auto|review|prompt`（既定: auto）
-- `--dry-run`（方式/除外の確認のみ）
-- `--keep-tmp`（prompt-based の一時ディレクトリを残す）
-- `--timeout <sec>`（Codex 実行のタイムアウト）
+例:
+```
+あなたはシニアレビュアーです。
+以下の変更をレビューしてください。
 
-### 代表的な使い方
+## 変更の意図
+Chrome拡張のパフォーマンス改善として、並列処理を追加しました。
 
-- Claude Code が作業したリポジトリでそのまま実行（未コミット差分）
-- AIPOレイヤーで実行（`programs/<project>/` など）
+## 特に確認してほしい点
+- 並列処理のエラーハンドリングは適切か
+- Promise.all の使い方に問題はないか
+- メモリリークの可能性はないか
 
-## 出力
+## 出力フォーマット
+- 概要
+- P0（必ず修正）
+- P1（修正推奨）
+- 質問
+- 次のアクション（提案）
+```
 
-- デフォルト出力先:
-  - `<repo_or_layer_dir>/codex_review/`
-- ファイル名: `codex_review_YYYY-MM-DD[_N].md`
+スクリプトが自動的にファイル内容と除外ファイルリストを追記します。
+
+## スクリプトの責務
+
+- **ファイル読み込みガード**: 機密ファイル・バイナリ・大きすぎるファイルを除外
+- **ファイル内容取得**: 安全なファイルの内容を読み込み
+- **機密値マスキング**: トークン等を自動マスク
+- **Codex 呼び出し**: read-only モードで実行
+- **レポート保存**: `<repo>/codex_review/` に出力
+
+## 安全策
+
+Never include（常に除外）:
+- `.env*`, `.secrets*`, `settings.local.json`
+- `.npmrc`, `.netrc`, SSH鍵
+- `*.pem`, `*.key` 等の証明書
+- `*.sqlite*`, `*.db`, `*.tfstate*`
+- `node_modules/`, `dist/`, `build/`, `.venv/`
+- バイナリファイル、10MB超のファイル
+
+## オプション
+
+- `--keep-tmp`: 一時ディレクトリを残す（デバッグ用）
+- `--timeout <sec>`: Codex 実行のタイムアウト
+- `--dry-run`: 検証のみ（Codex 実行しない）
 
 ## 言語
 
 - `--lang ja|en` を指定する（推奨）。
 - ユーザー指定が無い場合は **チャットで使用している言語**（日本語/英語）に合わせて `--lang` を決める。
-  - 日本語の指示で進行しているなら `--lang ja`
-  - 英語の指示で進行しているなら `--lang en`
-- 手元でスクリプトを単体実行する場合は `--lang auto` でもよい（環境変数や内容から推定）。
+
+## 出力
+
+- `<repo>/codex_review/codex_review_YYYY-MM-DD_HH-MM-SS.md`

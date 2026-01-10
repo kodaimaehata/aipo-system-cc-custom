@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""Codex Review Script - Execute Codex CLI review with custom prompt and file list.
+
+Claude Code generates the review prompt and specifies target files.
+This script validates files, reads content, calls Codex, and saves the report.
+"""
 from __future__ import annotations
 
 import argparse
@@ -7,18 +12,15 @@ import os
 import re
 import signal
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 
 
 class CodexReviewError(Exception):
     pass
-
-
-def _today_iso() -> str:
-    return date.today().isoformat()
 
 
 def _now_iso() -> str:
@@ -56,7 +58,8 @@ def _i18n_exclude_reason(reason: str, *, lang: str) -> str:
         "git internals": "Git内部",
         "generated/deps": "生成物/依存",
         "binary/non-utf8": "バイナリ/非UTF-8",
-        "too large (>1MB)": "大きすぎる（>1MB）",
+        "too large (>10MB)": "大きすぎる（>10MB）",
+        "not found": "ファイルなし",
     }
     return mapping.get(reason, reason)
 
@@ -105,123 +108,33 @@ def _run(cmd: list[str], *, cwd: Path, input_text: str | None = None, timeout_s:
     return stdout
 
 
-def _is_git_repo(repo_dir: Path) -> bool:
-    try:
-        _run(["git", "rev-parse", "--is-inside-work-tree"], cwd=repo_dir)
-        return True
-    except CodexReviewError:
-        return False
-
-
-def _git_uncommitted_paths(repo_dir: Path) -> list[str]:
-    out: set[str] = set()
-    for cmd in [
-        ["git", "diff", "--name-only", "-z"],
-        ["git", "diff", "--name-only", "--cached", "-z"],
-        ["git", "ls-files", "--others", "--exclude-standard", "-z"],
-    ]:
-        raw = _run(cmd, cwd=repo_dir)
-        for p in raw.split("\0"):
-            p = p.strip()
-            if p:
-                out.add(p)
-    return sorted(out)
-
-
 def _is_probably_binary(path: Path) -> bool:
+    """Check if file is binary by looking for null bytes."""
     try:
-        data = path.read_bytes()[:2048]
+        data = path.read_bytes()[:8192]
     except FileNotFoundError:
         return False
-    if b"\x00" in data:
-        return True
-    # Heuristic: too many non-text bytes
-    try:
-        data.decode("utf-8")
-        return False
-    except UnicodeDecodeError:
-        return True
+    # Null byte is a strong indicator of binary
+    return b"\x00" in data
 
 
-CODE_EXTS = {
-    ".py",
-    ".js",
-    ".ts",
-    ".tsx",
-    ".jsx",
-    ".go",
-    ".rs",
-    ".java",
-    ".kt",
-    ".swift",
-    ".c",
-    ".cc",
-    ".cpp",
-    ".h",
-    ".hpp",
-    ".cs",
-    ".rb",
-    ".php",
-    ".sh",
-    ".bash",
-    ".zsh",
-    ".lua",
-    ".sql",
-    ".html",
-    ".css",
-    ".scss",
-}
+def _read_text_file(path: Path) -> str | None:
+    """Read text file with encoding detection. Returns None if unreadable."""
+    # Try common encodings in order of likelihood
+    encodings = ["utf-8", "utf-8-sig", "shift_jis", "cp932", "euc-jp", "iso-8859-1"]
+    for enc in encodings:
+        try:
+            return path.read_text(encoding=enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return None
 
-DOC_EXTS = {
-    ".md",
-    ".txt",
-    ".rst",
-    ".adoc",
-    ".yaml",
-    ".yml",
-    ".json",
-    ".toml",
-}
 
-CODE_FILENAMES = {
-    "Makefile",
-    "Dockerfile",
-}
-
-DOC_FILENAMES = {
-    ".gitignore",
-    ".gitattributes",
-}
-
-SECRET_EXTS = {
-    ".pem",
-    ".key",
-    ".p12",
-    ".pfx",
-    ".crt",
-    ".cer",
-    ".der",
-    ".jks",
-    ".kdb",
-}
-
-DB_EXTS = {
-    ".sqlite",
-    ".sqlite3",
-    ".db",
-}
-
-CREDENTIAL_FILENAMES = {
-    ".npmrc",
-    ".netrc",
-}
-
-SSH_KEY_FILENAMES = {
-    "id_rsa",
-    "id_ed25519",
-    "authorized_keys",
-    "known_hosts",
-}
+# File classification constants
+SECRET_EXTS = {".pem", ".key", ".p12", ".pfx", ".crt", ".cer", ".der", ".jks", ".kdb"}
+DB_EXTS = {".sqlite", ".sqlite3", ".db"}
+CREDENTIAL_FILENAMES = {".npmrc", ".netrc"}
+SSH_KEY_FILENAMES = {"id_rsa", "id_ed25519", "authorized_keys", "known_hosts"}
 
 _SECRET_NAME_RE = re.compile(
     r"(^|[._-])(secret|secrets|token|tokens|credential|credentials|apikey|api_key|private|key|keys)($|[._-])",
@@ -247,6 +160,7 @@ _TOKEN_PATTERNS: tuple[re.Pattern[str], ...] = (
 
 
 def _redact_text(text: str) -> str:
+    """Mask sensitive values in text."""
     if not text:
         return text
     out = _PRIVATE_KEY_BLOCK_RE.sub("<REDACTED_PRIVATE_KEY>", text)
@@ -255,30 +169,13 @@ def _redact_text(text: str) -> str:
     return out
 
 
-def _is_code_path(rel_path: str) -> bool:
-    p = Path(rel_path)
-    if p.name in CODE_FILENAMES:
-        return True
-    ext = p.suffix.lower()
-    if ext in CODE_EXTS:
-        return True
-    return False
-
-
-def _is_doc_path(rel_path: str) -> bool:
-    p = Path(rel_path)
-    if p.name in DOC_FILENAMES:
-        return True
-    ext = p.suffix.lower()
-    return ext in DOC_EXTS
-
-
 def _is_excluded_path(rel_path: str) -> tuple[bool, str]:
-    # Hard excludes (safety)
+    """Check if a file path should be excluded for security reasons."""
     p = Path(rel_path)
     parts_lower = [x.lower() for x in p.parts]
     name = p.name.lower()
     ext = p.suffix.lower()
+
     if name.startswith(".env") or name.startswith(".secrets"):
         return (True, "secrets/env")
     if "secrets" in parts_lower or ".secrets" in parts_lower:
@@ -301,133 +198,92 @@ def _is_excluded_path(rel_path: str) -> tuple[bool, str]:
         return (True, "git internals")
     if any(x in parts_lower for x in ["node_modules", "dist", "build", ".venv"]):
         return (True, "generated/deps")
-    # Large/binary handled later
+
     return (False, "")
 
 
 @dataclass(frozen=True)
-class ChangeSummary:
-    code_paths: tuple[str, ...]
-    doc_paths: tuple[str, ...]
-    other_paths: tuple[str, ...]
+class ValidationResult:
+    safe_files: tuple[str, ...]
     excluded: tuple[tuple[str, str], ...]  # (path, reason)
 
 
-def _summarize_changes(repo_dir: Path, rel_paths: list[str]) -> ChangeSummary:
-    code: list[str] = []
-    docs: list[str] = []
-    other: list[str] = []
+def _read_custom_prompt(prompt_arg: str) -> str:
+    """Read custom prompt from argument or stdin."""
+    if prompt_arg == "-":
+        return sys.stdin.read()
+    return prompt_arg
+
+
+def _validate_files(repo_dir: Path, files: list[str]) -> ValidationResult:
+    """Validate file list and return safe files and excluded files."""
+    safe: list[str] = []
     excluded: list[tuple[str, str]] = []
 
-    for rp in rel_paths:
-        is_excl, reason = _is_excluded_path(rp)
+    for f in files:
+        # Security check
+        is_excl, reason = _is_excluded_path(f)
         if is_excl:
-            excluded.append((rp, reason))
+            excluded.append((f, reason))
             continue
 
-        abs_path = (repo_dir / rp)
-        if abs_path.exists() and abs_path.is_file():
-            if _is_probably_binary(abs_path):
-                excluded.append((rp, "binary/non-utf8"))
-                continue
-            if abs_path.stat().st_size > 1024 * 1024:
-                excluded.append((rp, "too large (>1MB)"))
-                continue
+        abs_path = repo_dir / f
+        if not abs_path.exists():
+            excluded.append((f, "not found"))
+            continue
+        if not abs_path.is_file():
+            excluded.append((f, "not a file"))
+            continue
+        if _is_probably_binary(abs_path):
+            excluded.append((f, "binary/non-utf8"))
+            continue
+        if abs_path.stat().st_size > 10 * 1024 * 1024:  # 10MB
+            excluded.append((f, "too large (>10MB)"))
+            continue
 
-        if _is_code_path(rp):
-            code.append(rp)
-        elif _is_doc_path(rp):
-            docs.append(rp)
-        else:
-            other.append(rp)
+        safe.append(f)
 
-    return ChangeSummary(
-        code_paths=tuple(sorted(code)),
-        doc_paths=tuple(sorted(docs)),
-        other_paths=tuple(sorted(other)),
+    return ValidationResult(
+        safe_files=tuple(sorted(safe)),
         excluded=tuple(sorted(excluded)),
     )
 
 
-def _review_prompt(lang: str, *, changed: ChangeSummary, method: str) -> str:
-    if lang == "ja":
-        required = (
-            "## 概要\n"
-            "## P0（必ず修正）\n"
-            "## P1（修正推奨）\n"
-            "## 質問\n"
-            "## 次のアクション（提案）\n"
-        )
-        return (
-            "あなたはシニアレビュアーです。\n"
-            "以下の変更をレビューし、Markdownで出力してください。\n\n"
-            "必須フォーマット:\n"
-            f"{required}\n"
-            "ルール:\n"
-            "- 指摘には対象ファイルパスを必ず含める\n"
-            "- 機密情報/個人情報を推測・再掲しない\n"
-            "- 可能なら具体的な修正案（文章案/設計案/手順）を提示する\n\n"
-            f"選択された方式: {method}\n"
-            f"変更ファイル（コード）: {', '.join(changed.code_paths) if changed.code_paths else '—'}\n"
-            f"変更ファイル（ドキュメント等）: {', '.join(changed.doc_paths) if changed.doc_paths else '—'}\n"
-            f"変更ファイル（その他）: {', '.join(changed.other_paths) if changed.other_paths else '—'}\n"
-            f"除外（送信しない）: {', '.join([f'{p}({r})' for p, r in changed.excluded]) if changed.excluded else '—'}\n"
-        )
-    return (
-        "You are a senior reviewer.\n"
-        "Review the changes below and output in Markdown.\n\n"
-        "Required format:\n"
-        "## Summary\n"
-        "## P0 (Must Fix)\n"
-        "## P1 (Should Fix)\n"
-        "## Questions\n"
-        "## Suggested Next Actions\n\n"
-        "Rules:\n"
-        "- Include file paths in every finding\n"
-        "- Do not infer or repeat secrets/PII\n"
-        "- Provide concrete fix suggestions when possible\n\n"
-        f"Chosen method: {method}\n"
-        f"Changed files (code): {', '.join(changed.code_paths) if changed.code_paths else '—'}\n"
-        f"Changed files (docs): {', '.join(changed.doc_paths) if changed.doc_paths else '—'}\n"
-        f"Changed files (other): {', '.join(changed.other_paths) if changed.other_paths else '—'}\n"
-        f"Excluded (not sent): {', '.join([f'{p}({r})' for p, r in changed.excluded]) if changed.excluded else '—'}\n"
-    )
+def _build_file_contents_section(repo_dir: Path, files: tuple[str, ...], lang: str) -> str:
+    """Read file contents and build a section for the prompt."""
+    parts: list[str] = []
+    label = "ファイル内容" if lang == "ja" else "File Contents"
 
-def _failure_body(lang: str, *, cause: str) -> str:
-    if lang == "ja":
-        return (
-            "## 概要\n\n"
-            f"- Codex 実行に失敗しました（{cause}）。\n\n"
-            "## P0（必ず修正）\n\n"
-            "- —\n\n"
-            "## P1（修正推奨）\n\n"
-            "- —\n\n"
-            "## 質問\n\n"
-            "- —\n\n"
-            "## 次のアクション（提案）\n\n"
-            "- `--dry-run` で方式/除外を確認する\n"
-            "- `--method prompt|review` を指定して再実行する\n"
-            "- 対象が大きい場合は分割して複数レポートにする\n"
-            "- `codex login` 状態を確認する\n\n"
-        )
-    return (
-        "## Summary\n\n"
-        f"- Codex execution failed ({cause}).\n\n"
-        "## P0 (Must Fix)\n\n"
-        "- —\n\n"
-        "## P1 (Should Fix)\n\n"
-        "- —\n\n"
-        "## Questions\n\n"
-        "- —\n\n"
-        "## Suggested Next Actions\n\n"
-        "- Run with `--dry-run` to confirm method/exclusions\n"
-        "- Retry with `--method prompt|review`\n"
-        "- If the input is too large, split the review into multiple runs\n"
-        "- Check `codex login` status\n\n"
-    )
+    for f in files:
+        abs_path = repo_dir / f
+        content = _read_text_file(abs_path)
+        if content is not None:
+            content = _redact_text(content)
+            ext = abs_path.suffix.lstrip(".") or "text"
+            parts.append(f"### {f}\n```{ext}\n{content.rstrip()}\n```")
+        else:
+            error_msg = "読み込み不可（エンコーディング不明）" if lang == "ja" else "unreadable (unknown encoding)"
+            parts.append(f"### {f}\n({error_msg})")
+
+    return f"## {label}\n\n" + "\n\n".join(parts) if parts else ""
+
+
+def _build_excluded_section(excluded: tuple[tuple[str, str], ...], lang: str) -> str:
+    """Build excluded files section."""
+    if not excluded:
+        return ""
+
+    label = "除外ファイル" if lang == "ja" else "Excluded Files"
+    parts: list[str] = []
+    for path, reason in excluded:
+        localized_reason = _i18n_exclude_reason(reason, lang=lang)
+        parts.append(f"- {path} ({localized_reason})")
+
+    return f"## {label}\n\n" + "\n".join(parts)
 
 
 def _extract_codex_agent_message(jsonl: str) -> str:
+    """Extract the final agent message from Codex JSON output."""
     last: str | None = None
     for line in (jsonl or "").splitlines():
         line = line.strip()
@@ -452,50 +308,6 @@ def _extract_codex_agent_message(jsonl: str) -> str:
     return last
 
 
-def _build_prompt_based_input(repo_dir: Path, *, changed: ChangeSummary, lang: str) -> str:
-    safe_paths = list(changed.code_paths) + list(changed.doc_paths) + list(changed.other_paths)
-    prompt_method = "プロンプト入力（対象絞り込み）" if lang == "ja" else "prompt (targeted input)"
-    header = _review_prompt(lang, changed=changed, method=prompt_method)
-
-    if not safe_paths:
-        return header + ("\n\n変更が見つかりませんでした。\n" if lang == "ja" else "\n\nNo changes found.\n")
-
-    staged_label = "### Staged Diff" if lang != "ja" else "### ステージ済み差分"
-    unstaged_label = "### Unstaged Diff" if lang != "ja" else "### 未ステージ差分"
-    untracked_label = "### Untracked File: " if lang != "ja" else "### 未追跡ファイル: "
-
-    diff_parts: list[str] = []
-    if safe_paths:
-        diff_unstaged = _redact_text(_run(["git", "diff", "--no-color", "--", *safe_paths], cwd=repo_dir))
-        diff_staged = _redact_text(_run(["git", "diff", "--cached", "--no-color", "--", *safe_paths], cwd=repo_dir))
-        if diff_staged.strip():
-            diff_parts.append(staged_label + "\n```diff\n" + diff_staged.rstrip() + "\n```")
-        if diff_unstaged.strip():
-            diff_parts.append(unstaged_label + "\n```diff\n" + diff_unstaged.rstrip() + "\n```")
-
-    # Untracked files: include content (if safe) because git diff won't show them.
-    untracked_raw = _run(["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd=repo_dir)
-    untracked = [p for p in untracked_raw.split("\0") if p.strip()]
-    untracked_safe: list[str] = []
-    for rp in untracked:
-        if rp in safe_paths:
-            untracked_safe.append(rp)
-    if untracked_safe:
-        blocks: list[str] = []
-        for rp in untracked_safe[:20]:
-            abs_path = repo_dir / rp
-            try:
-                text = _redact_text(abs_path.read_text(encoding="utf-8"))
-            except Exception:
-                continue
-            blocks.append(f"{untracked_label}{rp}\n```text\n{text.rstrip()}\n```")
-        if blocks:
-            diff_parts.append("\n".join(blocks))
-
-    body = "\n\n".join(diff_parts) if diff_parts else ("(diff empty)" if lang != "ja" else "（diffなし）")
-    return header + "\n\n" + body
-
-
 def _output_dir(repo_dir: Path) -> Path:
     return repo_dir / "codex_review"
 
@@ -512,83 +324,62 @@ def _unique_output_path(out_dir: Path, *, stem: str) -> Path:
     raise CodexReviewError("too many existing review files")
 
 
-def _format_excluded(excluded: tuple[tuple[str, str], ...], *, lang: str) -> str:
-    if not excluded:
-        return "—"
-    parts: list[str] = []
-    for path, reason in excluded:
-        parts.append(f"{path}({_i18n_exclude_reason(reason, lang=lang)})")
-    return ", ".join(parts)
-
-
 def _report_preamble(
     lang: str,
     *,
     repo_dir: Path,
-    method_cmd: str,
-    method_note: str,
-    review_mode: str,
-    scope: str,
-    excluded: tuple[tuple[str, str], ...],
     timestamp: str,
+    file_count: int,
+    excluded_count: int,
 ) -> str:
-    excluded_text = _format_excluded(excluded, lang=lang)
     if lang == "ja":
-        note = f"（{method_note}）" if method_note else ""
         return (
             f"# Codex レビュー ({timestamp})\n\n"
             f"- 日時: `{timestamp}`\n"
             f"- 対象: `{repo_dir}`\n"
-            f"- 方式: `{method_cmd}`{note}\n"
-            f"- レビューモード: `{review_mode}`\n"
-            f"- スコープ: `{scope}`\n"
-            f"- 除外: {excluded_text}\n\n"
+            f"- ファイル数: {file_count}\n"
+            f"- 除外: {excluded_count}\n\n"
         )
-    note = f" ({method_note})" if method_note else ""
     return (
         f"# Codex Review ({timestamp})\n\n"
         f"- datetime: `{timestamp}`\n"
         f"- repo/layer: `{repo_dir}`\n"
-        f"- method: `{method_cmd}`{note}\n"
-        f"- review_mode: `{review_mode}`\n"
-        f"- scope: `{scope}`\n"
-        f"- excluded: {excluded_text}\n\n"
+        f"- files: {file_count}\n"
+        f"- excluded: {excluded_count}\n\n"
     )
 
 
-def _runlog_section(lang: str, entries: list[tuple[str, str | None]]) -> str:
-    if not entries:
-        return ""
-    title = "## 実行ログ" if lang == "ja" else "## Execution Log"
-    lines: list[str] = [title, ""]
-    for label, err in entries:
-        if err:
-            if lang == "ja":
-                lines.append(f"- {label}: 失敗")
-                lines.append(f"  - エラー: {err}")
-            else:
-                lines.append(f"- {label}: failed")
-                lines.append(f"  - error: {err}")
-        else:
-            lines.append(f"- {label}: {'成功' if lang == 'ja' else 'ok'}")
-    lines.append("")
-    return "\n".join(lines)
+def _failure_body(lang: str, *, cause: str) -> str:
+    if lang == "ja":
+        return (
+            "## 概要\n\n"
+            f"- Codex 実行に失敗しました（{cause}）。\n\n"
+            "## 次のアクション（提案）\n\n"
+            "- `--dry-run` でファイル検証を確認する\n"
+            "- 対象ファイルが正しいか確認する\n"
+            "- `codex login` 状態を確認する\n\n"
+        )
+    return (
+        "## Summary\n\n"
+        f"- Codex execution failed ({cause}).\n\n"
+        "## Suggested Next Actions\n\n"
+        "- Run with `--dry-run` to check file validation\n"
+        "- Verify target files are correct\n"
+        "- Check `codex login` status\n\n"
+    )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run Codex review and save report (auto method selection).")
-    parser.add_argument("--path", default=".", help="Target repo/layer directory (default: current dir).")
-    parser.add_argument("--lang", default="auto", help="ja|en|auto (default: auto via env; prefer explicit).")
-    parser.add_argument("--mode", choices=["uncommitted"], default="uncommitted", help="Review mode (default: uncommitted).")
-    parser.add_argument(
-        "--method",
-        choices=["auto", "review", "prompt"],
-        default="auto",
-        help="Force method. auto=choose based on changed file types.",
+    parser = argparse.ArgumentParser(
+        description="Run Codex review with custom prompt and file list."
     )
-    parser.add_argument("--keep-tmp", action="store_true", help="Keep temp working directory for prompt-based exec (debug).")
-    parser.add_argument("--timeout", type=float, default=None, help="Timeout seconds for Codex CLI execution (optional).")
-    parser.add_argument("--dry-run", action="store_true", help="Print chosen method and exit.")
+    parser.add_argument("--path", default=".", help="Target directory (default: current dir).")
+    parser.add_argument("--lang", default="auto", help="ja|en|auto (default: auto).")
+    parser.add_argument("--prompt", required=True, help="Review prompt (use '-' to read from stdin).")
+    parser.add_argument("--files", nargs="+", required=True, help="Files to review (relative to --path).")
+    parser.add_argument("--keep-tmp", action="store_true", help="Keep temp directory (debug).")
+    parser.add_argument("--timeout", type=float, default=None, help="Timeout seconds for Codex CLI.")
+    parser.add_argument("--dry-run", action="store_true", help="Validate files and exit (no Codex run).")
     args = parser.parse_args()
 
     repo_dir = Path(args.path)
@@ -596,157 +387,91 @@ def main() -> int:
         raise SystemExit(f"[ERROR] path not found: {repo_dir}")
     repo_dir = repo_dir.resolve()
 
-    if not _is_git_repo(repo_dir):
-        raise SystemExit(f"[ERROR] not a git repository: {repo_dir}")
+    # Read custom prompt
+    custom_prompt = _read_custom_prompt(args.prompt)
 
-    rel_paths = _git_uncommitted_paths(repo_dir)
-    changed = _summarize_changes(repo_dir, rel_paths)
+    # Validate files
+    validation = _validate_files(repo_dir, args.files)
 
-    sample_parts: list[str] = []
-    if rel_paths:
-        sample_parts.append("\n".join(rel_paths))
-    layer_yaml = repo_dir / "layer.yaml"
-    if layer_yaml.exists():
-        try:
-            sample_parts.append(layer_yaml.read_text(encoding="utf-8")[:5000])
-        except Exception:
-            pass
-    lang = _pick_lang(args.lang, sample="\n".join(sample_parts))
+    # Determine language
+    sample = custom_prompt + "\n".join(validation.safe_files)
+    lang = _pick_lang(args.lang, sample=sample)
 
-    if args.method == "review":
-        chosen = "review"
-    elif args.method == "prompt":
-        chosen = "prompt"
-    else:
-        chosen = "review" if changed.code_paths else "prompt"
-        # Safety: if excluded files exist, avoid codex review (cannot exclude them).
-        if chosen == "review" and changed.excluded:
-            chosen = "prompt"
-
+    # Dry run: show validation results
     if args.dry_run:
         print(f"[INFO] repo: {repo_dir}")
         print(f"[INFO] lang: {lang}")
-        print(f"[INFO] mode: {args.mode}")
-        print(f"[INFO] chosen method: {chosen}")
-        print(f"[INFO] code: {len(changed.code_paths)} docs: {len(changed.doc_paths)} other: {len(changed.other_paths)} excluded: {len(changed.excluded)}")
+        print(f"[INFO] safe files: {len(validation.safe_files)}")
+        for f in validation.safe_files:
+            print(f"  - {f}")
+        print(f"[INFO] excluded: {len(validation.excluded)}")
+        for f, reason in validation.excluded:
+            print(f"  - {f} ({_i18n_exclude_reason(reason, lang=lang)})")
         return 0
 
+    # Check if we have files to review
+    if not validation.safe_files:
+        error_msg = "レビュー対象のファイルがありません" if lang == "ja" else "No files to review"
+        if validation.excluded:
+            error_msg += f" ({len(validation.excluded)} excluded)"
+        raise SystemExit(f"[ERROR] {error_msg}")
+
+    # Build final prompt
+    file_contents = _build_file_contents_section(repo_dir, validation.safe_files, lang)
+    excluded_section = _build_excluded_section(validation.excluded, lang)
+
+    final_prompt = custom_prompt
+    if file_contents:
+        final_prompt += "\n\n" + file_contents
+    if excluded_section:
+        final_prompt += "\n\n" + excluded_section
+
+    # Prepare output
     out_dir = _output_dir(repo_dir)
     timestamp = _now_iso()
     out_path = _unique_output_path(out_dir, stem=f"codex_review_{timestamp}")
 
-    runlog: list[tuple[str, str | None]] = []
-
-    def write_report(method_cmd: str, method_note: str, body: str) -> None:
+    def write_report(body: str) -> None:
         report = _report_preamble(
             lang,
             repo_dir=repo_dir,
-            method_cmd=method_cmd,
-            method_note=method_note,
-            review_mode=args.mode,
-            scope=str(repo_dir),
-            excluded=changed.excluded,
             timestamp=timestamp,
+            file_count=len(validation.safe_files),
+            excluded_count=len(validation.excluded),
         )
-        report += _runlog_section(lang, runlog)
         report += body
         out_path.write_text(report, encoding="utf-8")
 
-    def run_review() -> tuple[str, str, str]:
-        method_cmd = "codex exec（差分レビュー）" if lang == "ja" else "codex exec (diff review)"
-        method_note = "差分レビュー" if lang == "ja" else "diff-based review"
-        prompt_method = "差分レビュー（git差分を参照）" if lang == "ja" else "diff review (via git)"
-        prompt = _review_prompt(lang, changed=changed, method=prompt_method)
-        if lang == "ja":
-            prompt += (
-                "\n\n追加指示:\n"
-                "- このリポジトリの未コミット差分（staged/unstaged/untracked）をレビュー対象とする\n"
-                "- `git status --short` と `git diff --no-color` / `git diff --cached --no-color` を参照する\n"
-                "- ファイルの書き換えや破壊的コマンドは実行しない\n"
-            )
-        else:
-            prompt += (
-                "\n\nAdditional instructions:\n"
-                "- Review the current uncommitted changes (staged/unstaged/untracked)\n"
-                "- Use `git status --short`, `git diff --no-color`, and `git diff --cached --no-color`\n"
-                "- Do not modify files or run destructive commands\n"
-            )
-        out = _run(
-            ["codex", "-s", "read-only", "-a", "never", "exec", "--json", "-"],
-            cwd=repo_dir,
-            input_text=prompt,
-            timeout_s=args.timeout,
-        )
-        return (method_cmd, method_note, _extract_codex_agent_message(out))
-
-    def run_prompt() -> tuple[str, str, str]:
-        method_cmd = "codex exec"
-        method_note = "プロンプト入力（対象絞り込み）" if lang == "ja" else "prompt-based (targeted input)"
-        prompt = _build_prompt_based_input(repo_dir, changed=changed, lang=lang)
-
-        def run_in_tmp(tmp: Path) -> str:
-            out = _run(
-                ["codex", "-s", "read-only", "-a", "never", "exec", "--json", "--skip-git-repo-check", "-C", str(tmp), "-"],
-                cwd=repo_dir,
-                input_text=prompt,
-                timeout_s=args.timeout,
-            )
-            return _extract_codex_agent_message(out)
-
+    # Execute Codex
+    try:
         if args.keep_tmp:
             tmp_dir = out_dir / ".tmp_codex_review"
             tmp_dir.mkdir(parents=True, exist_ok=True)
-            text = run_in_tmp(tmp_dir)
         else:
-            with tempfile.TemporaryDirectory(prefix="tmp_codex_review_", dir=str(out_dir)) as tmp_name:
-                text = run_in_tmp(Path(tmp_name))
+            tmp_ctx = tempfile.TemporaryDirectory(prefix="tmp_codex_review_", dir=str(out_dir))
+            tmp_dir = Path(tmp_ctx.__enter__())
 
-        return (method_cmd, method_note, text)
+        try:
+            out = _run(
+                ["codex", "-s", "read-only", "-a", "never", "exec", "--json", "--skip-git-repo-check", "-C", str(tmp_dir), "-"],
+                cwd=repo_dir,
+                input_text=final_prompt,
+                timeout_s=args.timeout,
+            )
+            review_body = _extract_codex_agent_message(out)
+            write_report(review_body)
+            print(f"[OK] Wrote: {out_path}")
+            return 0
+        finally:
+            if not args.keep_tmp and "tmp_ctx" in locals():
+                tmp_ctx.__exit__(None, None, None)
 
-    def attempt(method: str) -> tuple[str, str, str]:
-        return run_review() if method == "review" else run_prompt()
-
-    try:
-        method_cmd, method_note, text = attempt(chosen)
-        write_report(method_cmd, method_note, text)
-        print(f"[OK] Wrote: {out_path}")
-        return 0
     except CodexReviewError as e:
-        runlog.append((f"attempt: {chosen}", str(e)))
-    except KeyboardInterrupt:
-        runlog.append((f"attempt: {chosen}", "interrupted"))
-        write_report("interrupted", "", _failure_body(lang, cause="interrupted"))
-        print(f"[ERROR] Interrupted; wrote report: {out_path}")
-        return 130
-
-    # If the user forced a method, stop here (but keep the report).
-    if args.method != "auto":
-        write_report("error", "", _failure_body(lang, cause="error"))
-        print(f"[ERROR] Review failed; wrote report: {out_path}")
-        return 1
-
-    # Fallback (auto only)
-    fallback = "prompt" if chosen == "review" else "review"
-    if fallback == "review" and changed.excluded:
-        # Cannot safely exclude paths with codex review.
-        write_report("error", "", _failure_body(lang, cause="error"))
-        print(f"[ERROR] Review failed; wrote report: {out_path}")
-        return 1
-
-    try:
-        method_cmd, method_note, text = attempt(fallback)
-        runlog.append((f"fallback: {fallback}", None))
-        write_report(method_cmd, method_note, text)
-        print(f"[OK] Wrote: {out_path}")
-        return 0
-    except CodexReviewError as e:
-        runlog.append((f"fallback: {fallback}", str(e)))
-        write_report("error", "", _failure_body(lang, cause="error"))
+        write_report(_failure_body(lang, cause=str(e)))
         print(f"[ERROR] Review failed; wrote report: {out_path}")
         return 1
     except KeyboardInterrupt:
-        runlog.append((f"fallback: {fallback}", "interrupted"))
-        write_report("interrupted", "", _failure_body(lang, cause="interrupted"))
+        write_report(_failure_body(lang, cause="interrupted"))
         print(f"[ERROR] Interrupted; wrote report: {out_path}")
         return 130
 
