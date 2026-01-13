@@ -20,6 +20,7 @@ Phase 3（make-marp-slide）の出力を最終成果物に変換する **Phase 4
 | format | 出力形式（pptx/pdf/html） | No | pptx |
 | output_file | 出力ファイルパス | No | 自動生成（入力ファイル名.{format}） |
 | allow_local_files | ローカルファイル参照許可 | No | true |
+| editable | PPTXのテキストを編集可能にする（LibreOffice必須） | No | false |
 
 ## Instructions
 
@@ -58,9 +59,14 @@ Phase 3（make-marp-slide）の出力を最終成果物に変換する **Phase 4
 
 ### Step 4: コマンド構築と実行
 
-**PPTX出力**:
+**PPTX出力**（通常）:
 ```bash
 npx @marp-team/marp-cli {input_file} --pptx -o {output_file} --allow-local-files
+```
+
+**PPTX出力**（editable=true の場合、LibreOffice必須）:
+```bash
+npx @marp-team/marp-cli {input_file} --pptx --pptx-editable -o {output_file} --allow-local-files
 ```
 
 **PDF出力**:
@@ -94,6 +100,7 @@ npx @marp-team/marp-cli {input_file} -o {output_file} --allow-local-files
 | `Failed to launch browser` | Chromiumの問題（PDF生成時） | `--no-sandbox` オプションを追加 |
 | `ENOENT` | 入力ファイルが見つからない | ファイルパスを確認 |
 | `Invalid Marp document` | Marp frontmatterがない | ファイル先頭に `marp: true` を追加 |
+| `LibreOffice could not convert` | `--pptx-editable` 使用時にLibreOfficeがない | LibreOfficeをインストールするか、`editable=false` で実行 |
 
 ## Output Format
 
@@ -104,6 +111,7 @@ npx @marp-team/marp-cli {input_file} -o {output_file} --allow-local-files
 
 ## Tips
 
+- **編集可能なPPTX**: `editable=true` でテキスト編集可能なPPTXを生成（実験的機能、LibreOffice必須）
 - **画像を含むスライド**: `--allow-local-files` オプションでローカル画像を参照可能
 - **カスタムテーマ**: `--theme` オプションでテーマを指定可能
 - **複数ファイル**: ディレクトリを指定して一括変換も可能
