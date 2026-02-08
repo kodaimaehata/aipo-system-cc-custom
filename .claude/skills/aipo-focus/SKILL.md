@@ -62,7 +62,9 @@ Upon approval:
    - `sublayers/[SG2_Name]/`
 
 3. **Generate Documents**:
-   - Create summary documents in `documents/` based on successful decomposition analysis (e.g., `strategic_analysis.md`).
+   - Create summary documents in `documents/` based on successful decomposition analysis.
+   - Focus-phase analysis documents (e.g., `strategic_analysis.md`) are not tied to a specific task and may use semantic names.
+   - If any document is associated with a task, use the `T{ID}_description.md` naming convention (see aipo-core "Document Naming Convention").
 
 ### Phase 5: Next Steps
 - Advise the user to run `/sense` on the high-priority SubLayers (Recursive Step).

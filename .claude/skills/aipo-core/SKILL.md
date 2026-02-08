@@ -154,6 +154,7 @@ programs/
 - **Context Inheritance**: SubLayers MUST reference their parent's context.
 - **Atomic Tasks**: If a task is complex, turn it into a SubLayer.
 - **Self-Contained**: Each layer contains everything needed to execute it.
+- **Document Naming Convention**: Task deliverables saved in `documents/` MUST use the prefix `T{ID}_` (e.g., `T001_findings.md`). When a single task produces multiple deliverables, distinguish them by the description part (e.g., `T001_findings.md`, `T001_appendix.md`). Documents not tied to a specific task (e.g., Focus-phase analysis) may use semantic names (e.g., `strategic_analysis.md`).
 
 ## Layer Directory Resolution (Rule)
 When a phase skill needs a target layer directory:

@@ -34,6 +34,12 @@ Before executing the core task:
    - If `command_template_ref` is set on the task, open it and adapt a task-specific execution plan.
    - Otherwise propose a minimal execution plan, ask for confirmation if it changes files, then execute.
 
+### Phase 3.5: Save Deliverables
+When saving deliverables to `documents/`:
+1. Name files using `T{ID}_description.md` format (e.g., `T001_findings.md`).
+2. If a task produces multiple deliverables, distinguish by the description part (e.g., `T001_findings.md`, `T001_appendix.md`).
+3. See aipo-core "Document Naming Convention" for full rules.
+
 ### Phase 4: Feedback
 1. Update `tasks.yaml`: Mark task as `completed`.
 2. Report deliverables to the user.
