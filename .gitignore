@@ -3,7 +3,10 @@ programs/*
 flows/*
 codex_review/*
 reviews/*
-
+/.claude/commands/aipo/*
+/.claude/skills/aipo/*
+/.cursor/commands/aipo/*
+/.cursor/skills/aipo/*
 
 # Original aipo-system 
 src/aipo (AI-PO) system/*
