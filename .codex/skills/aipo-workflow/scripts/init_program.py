@@ -10,6 +10,12 @@ from datetime import date
 from pathlib import Path
 
 
+ID_PREFIX = "P"
+ID_WIDTH = 4
+PROJECT_ID_PATTERN = re.compile(rf"^{ID_PREFIX}[0-9]{{{ID_WIDTH}}}$")
+ID_PREFIX_PATTERN = re.compile(rf"^{ID_PREFIX}[0-9]{{{ID_WIDTH}}}_")
+
+
 def _today_iso() -> str:
     return date.today().isoformat()
 
@@ -24,6 +30,26 @@ def _safe_dir_name(value: str) -> str:
     if value in {".", ".."}:
         raise ValueError("invalid project name")
     return value
+
+
+def _read_next_project_id(programs_dir: Path = Path("programs")) -> int:
+    max_id = 0
+    for child in programs_dir.iterdir():
+        if not child.is_dir():
+            continue
+        if ID_PREFIX_PATTERN.match(child.name):
+            numeric = child.name[len(ID_PREFIX) : len(ID_PREFIX) + ID_WIDTH]
+            if numeric.isdigit():
+                max_id = max(max_id, int(numeric))
+    return max_id + 1
+
+
+def _next_project_id(programs_dir: Path = Path("programs")) -> str:
+    next_id = _read_next_project_id(programs_dir)
+    max_id = 10**ID_WIDTH - 1
+    if next_id > max_id:
+        raise ValueError(f"project id overflow: max {max_id} reached")
+    return f"{ID_PREFIX}{next_id:0{ID_WIDTH}d}"
 
 
 def _write_json_yaml(path: Path, data: object, *, overwrite: bool) -> None:
@@ -55,6 +81,7 @@ def _git_init(repo_dir: Path) -> None:
 @dataclass(frozen=True)
 class InitArgs:
     project_name: str
+    project_id: str
     layer_name: str
     goal: str
     preset: str
@@ -72,6 +99,7 @@ def _build_layer_yaml(args: InitArgs, *, layer_id: str) -> dict:
     return {
         "version": "1.0",
         "project_name": args.project_name,
+        "project_id": args.project_id,
         "layer_id": layer_id,
         "layer_name": args.layer_name,
         "workflow_preset": args.preset,
@@ -89,6 +117,7 @@ def _build_context_yaml(args: InitArgs, *, layer_id: str) -> dict:
     base = {
         "version": "1.1",
         "project_name": args.project_name,
+        "project_id": args.project_id,
         "layer_id": layer_id,
         "generated_at": _today_iso(),
         "parent_context_dir": None,
@@ -147,6 +176,7 @@ def _build_tasks_yaml(args: InitArgs, *, layer_id: str) -> dict:
     return {
         "version": "2.2",
         "project_name": args.project_name,
+        "project_id": args.project_id,
         "layer_id": layer_id,
         "generated_at": _today_iso(),
         "decomposition_type": "recursive",
@@ -167,6 +197,11 @@ def _build_tasks_yaml(args: InitArgs, *, layer_id: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Initialize an AIPO program folder under programs/{project}.")
     parser.add_argument("--project", required=True, help="Project directory name (used under programs/).")
+    parser.add_argument(
+        "--project-id",
+        default=None,
+        help=f"Explicit project ID (e.g. {ID_PREFIX}0001). Auto assigned by next available ID if omitted.",
+    )
     parser.add_argument("--layer-name", default="Root", help="Root layer name.")
     parser.add_argument("--goal", required=True, help="One-line goal.")
     parser.add_argument("--preset", choices=["general", "discovery"], default="general")
@@ -198,6 +233,15 @@ def main() -> int:
     args_ns = parser.parse_args()
 
     project_name = _safe_dir_name(args_ns.project)
+    program_root = Path("programs")
+    program_root.mkdir(parents=True, exist_ok=True)
+
+    if args_ns.project_id is None:
+        project_id = _next_project_id(program_root)
+    else:
+        project_id = args_ns.project_id.strip()
+        if not PROJECT_ID_PATTERN.match(project_id):
+            raise ValueError(f"invalid --project-id: {project_id}")
 
     # Parse comma-separated values
     context_methods = None
@@ -214,6 +258,7 @@ def main() -> int:
 
     args = InitArgs(
         project_name=project_name,
+        project_id=project_id,
         layer_name=args_ns.layer_name,
         goal=args_ns.goal,
         preset=args_ns.preset,
@@ -227,8 +272,8 @@ def main() -> int:
         external_paths=external_paths,
     )
 
-    base_dir = Path("programs") / args.project_name
-    layer_id = "L001"
+    base_dir = program_root / f"{args.project_id}_{args.project_name}"
+    layer_id = args.project_id
 
     if args.git_init:
         base_dir.mkdir(parents=True, exist_ok=True)
@@ -252,7 +297,11 @@ def main() -> int:
     )
 
     _write_json_yaml(base_dir / "layer.yaml", _build_layer_yaml(args, layer_id=layer_id), overwrite=args.overwrite)
-    _write_json_yaml(base_dir / "context.yaml", _build_context_yaml(args, layer_id=layer_id), overwrite=args.overwrite)
+    _write_json_yaml(
+        base_dir / "context.yaml",
+        _build_context_yaml(args, layer_id=layer_id),
+        overwrite=args.overwrite,
+    )
     _write_json_yaml(base_dir / "tasks.yaml", _build_tasks_yaml(args, layer_id=layer_id), overwrite=args.overwrite)
 
     _write_text(

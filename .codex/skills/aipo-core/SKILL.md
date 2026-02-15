@@ -15,7 +15,7 @@ description: "Core schemas, directory layout, and operating rules for the AIPO (
 
 ## Canonical Artifacts（保存先）
 
-- すべてのAIPO成果物は `programs/{project_name}/` 配下に保存する。
+- すべてのAIPO成果物は `programs/P####_{project_name}/` 配下に保存する。
 - 推奨ディレクトリ構造と `.yaml` スキーマは以下を参照する:
   - `programs/` 構造と schema: `.codex/skills/aipo-workflow/references/program-schema.md`
   - フェーズ運用: `.codex/skills/aipo-workflow/references/workflow.md`
@@ -58,6 +58,5 @@ python3 .codex/skills/aipo-workflow/scripts/validate_program.py --path "<layer_d
 ## Canonical Scripts（推奨）
 
 - Program作成: `python3 .codex/skills/aipo-workflow/scripts/init_program.py --project "<project_name>" --goal "<goal>" --preset general`
-- SubLayer雛形生成: `python3 .codex/skills/aipo-workflow/scripts/sync_sublayers.py --project "<project_name>"`
-- commands雛形生成: `python3 .codex/skills/aipo-workflow/scripts/generate_commands.py --project "<project_name>"`
-
+- SubLayer雛形生成: `python3 .codex/skills/aipo-workflow/scripts/sync_sublayers.py --project "P0001_<project_name>"`
+- commands雛形生成: `python3 .codex/skills/aipo-workflow/scripts/generate_commands.py --project "P0001_<project_name>"`

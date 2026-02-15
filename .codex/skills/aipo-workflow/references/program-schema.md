@@ -2,12 +2,12 @@
 
 ## 保存先（必須）
 
-すべての成果物は `programs/{project名}/` に保存する。
+すべての成果物は `programs/P####_{project名}/` に保存する。
 
 ## ディレクトリ構造（推奨）
 
 ```text
-programs/{project名}/
+programs/P####_{project名}/
   README.md
   .gitignore
   layer.yaml
@@ -35,7 +35,7 @@ programs/{project名}/
 
 ## Git運用（前提）
 
-`programs/{project名}/` は **プロジェクトごとの独立リポジトリ**として扱う（各プロジェクトで `git init` する）。
+`programs/P####_{project名}/` は **プロジェクトごとの独立リポジトリ**として扱う（各プロジェクトで `git init` する）。
 
 - 親リポジトリ側は `programs/*` を追跡しない運用を推奨（親にGitを導入する場合は `.gitignore` で除外）
 - 目的: プロジェクト単位で履歴・レビュー・リリースを独立させるため
@@ -59,6 +59,7 @@ programs/{project名}/
 必須フィールド:
 - `version`
 - `project_name`
+- `project_id`
 - `layer_id`
 - `layer_name`
 - `workflow_preset`（`general` / `discovery`）
@@ -73,6 +74,7 @@ programs/{project名}/
 {
   "version": "1.0",
   "project_name": "example-project",
+  "project_id": "P0001",
   "layer_id": "L001",
   "layer_name": "Root",
   "workflow_preset": "general",
@@ -94,6 +96,7 @@ programs/{project名}/
 必須フィールド:
 - `version`
 - `project_name`
+- `project_id`
 - `layer_id`
 - `generated_at`
 - `context_documents[]`（`path` と `summary` を持つ）
@@ -108,6 +111,7 @@ programs/{project名}/
 {
   "version": "1.1",
   "project_name": "example-project",
+  "project_id": "P0001",
   "layer_id": "L001",
   "generated_at": "2025-12-29",
   "parent_context_dir": null,
@@ -160,6 +164,7 @@ programs/{project名}/
 必須フィールド:
 - `version`
 - `project_name`
+- `project_id`
 - `layer_id`
 - `generated_at`
 - `decomposition_type`（`recursive` 推奨）
@@ -180,6 +185,7 @@ programs/{project名}/
 {
   "version": "2.2",
   "project_name": "example-project",
+  "project_id": "P0001",
   "layer_id": "L001",
   "generated_at": "2025-12-29",
   "decomposition_type": "recursive",

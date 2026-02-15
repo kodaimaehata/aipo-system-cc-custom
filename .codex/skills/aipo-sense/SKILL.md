@@ -14,7 +14,7 @@ description: "AIPO Sense phase for Codex CLI. Initialize a new AIPO program (roo
 
 ## 1) モード判定
 
-- **新規 Program（Root Layer）作成**: `programs/{project_name}/` がまだ無い
+- **新規 Program（Root Layer）作成**: `programs/P####_{project_name}/` がまだ無い
 - **既存 Layer の前提整備**: すでに `<layer_dir>` がある（`context/` 追加・`context.yaml` 更新など）
 - **SubLayer の初期化**: 親レイヤーの `tasks.yaml.sublayers` に定義があり、まだ実体フォルダが無い
 
@@ -28,7 +28,8 @@ python3 .codex/skills/aipo-workflow/scripts/init_program.py \
 ```
 
 - `--preset discovery` は新規事業ディスカバリー用途
-- `--no-git-init` を付けると `programs/{project_name}/` で `git init` をしない
+- `--project-id` を指定しない場合、`programs/` 配下で未使用の `P0001` 形式のIDを最小から採番して `programs/P0001_<project_name>/` を作成する
+- `--no-git-init` を付けると `programs/P####_{project_name}/` で `git init` をしない
 
 ## 3) SubLayer を初期化する（推奨: script）
 

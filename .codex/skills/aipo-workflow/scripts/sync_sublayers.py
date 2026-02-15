@@ -73,6 +73,7 @@ def _init_sublayer_folder(
     sublayer_dir: Path,
     *,
     project_name: str,
+    project_id: str | None,
     layer_id: str,
     layer_name: str,
     goal: str,
@@ -112,6 +113,8 @@ def _init_sublayer_folder(
         "created_at": _today_iso(),
         "updated_at": _today_iso(),
     }
+    if isinstance(project_id, str) and project_id:
+        layer_yaml["project_id"] = project_id
     _write_json_yaml(sublayer_dir / "layer.yaml", layer_yaml, overwrite=False)
 
     context_yaml = {
@@ -133,6 +136,8 @@ def _init_sublayer_folder(
             },
         ],
     }
+    if isinstance(project_id, str) and project_id:
+        context_yaml["project_id"] = project_id
     _write_json_yaml(sublayer_dir / "context.yaml", context_yaml, overwrite=False)
 
     tasks_yaml = {
@@ -153,6 +158,8 @@ def _init_sublayer_folder(
         },
         "summary": {"sublayer_count": 0, "task_count": 0, "next_action": "focus: tasks分解"},
     }
+    if isinstance(project_id, str) and project_id:
+        tasks_yaml["project_id"] = project_id
     _write_json_yaml(sublayer_dir / "tasks.yaml", tasks_yaml, overwrite=False)
 
     _write_text(
@@ -191,6 +198,11 @@ def main() -> int:
         raise SystemExit("[ERROR] layer.yaml and tasks.yaml must be JSON objects")
 
     project_name = str(layer.get("project_name") or args.project)
+    project_id = layer.get("project_id")
+    if project_id is None:
+        project_id = tasks.get("project_id")
+    if project_id is not None:
+        project_id = str(project_id)
     parent_layer_id = str(layer.get("layer_id") or "L001")
     workflow_preset = str(layer.get("workflow_preset") or "general")
     mode = str(layer.get("mode") or "concrete")
@@ -242,6 +254,7 @@ def main() -> int:
         _init_sublayer_folder(
             sublayer_dir,
             project_name=project_name,
+            project_id=project_id,
             layer_id=sub_layer_id,
             layer_name=layer_name,
             goal=sub_goal,
