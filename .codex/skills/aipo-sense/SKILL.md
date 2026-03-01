@@ -44,6 +44,7 @@ python3 .codex/skills/aipo-workflow/scripts/sync_sublayers.py --path "<parent_la
 - `context/` に前提情報をMarkdownで追加・更新する（例: `01_overview.md`, `02_constraints.md`, `03_resources.md`）。
 - `context.yaml.context_documents[]` に「パス」と「要約」を追加・更新する。
 - 必要に応じて親の文脈を参照できるように `context.yaml.parent_context_dir` を維持する（SubLayerの場合は script が設定する）。
+- `programs/archived_projects.md` がある場合、過去にアーカイブされたプロジェクトの「目的（purpose）」と「実施内容（activities）」から、再利用価値のある制約・成功条件・失敗事例を必要に応じて `context_documents` に反映する。
 
 ## 5) 検証（任意・推奨）
 

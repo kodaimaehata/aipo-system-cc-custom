@@ -1,6 +1,6 @@
 ---
 name: aipo-workflow
-description: "AIPO (AI Product Owner) workflow for Codex CLI. Use to run Sense→Focus→Discover→Deliver→Operation as file-based artifacts under programs/P####_{project} (layer.yaml/context.yaml/tasks.yaml/commands). Triggers: project planning/execution with AIPO terms, generating/updating those YAML files, or new business discovery (市場調査・課題仮説・検証計画・MVP定義/開発計画)."
+description: "AIPO (AI Product Owner) workflow for Codex CLI. Use to run Sense→Focus→Discover→Deliver→Operation as file-based artifacts under programs/P####_{project} (layer.yaml/context.yaml/tasks.yaml/commands). Include archive/reuse workflows: completed or suspended projects are moved via aipo-archive-project and historical context can be reused in Sense via programs/archived_projects.md."
 ---
 
 # AIPO Workflow
@@ -60,6 +60,14 @@ python3 .codex/skills/aipo-workflow/scripts/migrate_project_ids.py --base-dir "p
 python3 .codex/skills/aipo-workflow/scripts/migrate_project_ids.py --base-dir "programs" --dry-run
 ```
 
+### 5) プロジェクトをアーカイブする
+
+```bash
+python3 .codex/skills/aipo-archive-project/scripts/archive_project.py "<project_or_path>"
+```
+
+実行結果は `programs/archived_projects.md` に記録され、後続の Sense で再利用できる履歴として保持されます。
+
 ## Workflow（Sense→Focus→Discover→Deliver→Operation）
 
 このスキルでは、AIPOの成果物を以下の順で更新していく。
@@ -82,6 +90,7 @@ python3 .codex/skills/aipo-workflow/scripts/migrate_project_ids.py --base-dir "p
 - `scripts/init_program.py`: `programs/P####_{project名}/` を初期化（`layer.yaml`/`context.yaml`/`tasks.yaml` と最低限のフォルダ）
 - `scripts/validate_program.py`: program 配下のJSON互換YAMLを検証
 - `scripts/generate_commands.py`: `tasks.yaml` から `commands/*.md` 雛形を生成
+- `aipo-archive-project`: 完了・保留・中断プロジェクトを `programs/archived` に移し、`programs/archived_projects.md` を蓄積
 
 ## Notes（重要）
 
