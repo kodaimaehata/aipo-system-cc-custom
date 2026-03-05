@@ -7,6 +7,7 @@ reviews/*
 /.claude/skills/aipo/*
 /.cursor/commands/aipo/*
 /.cursor/skills/aipo/*
+tmp/*
 
 # Original aipo-system 
 src/aipo (AI-PO) system/*
