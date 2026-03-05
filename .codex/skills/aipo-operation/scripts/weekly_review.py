@@ -328,6 +328,7 @@ def _normalize_status(value: str, lang: str) -> str:
     mapping = {
         "pending": "未着手",
         "in_progress": "進行中",
+        "done": "完了",
         "completed": "完了",
         "verified": "検証済",
         "ready": "準備完了",
@@ -757,7 +758,12 @@ def _resolve_task_command_path(layer_dir: Path, tasks_cfg: dict[str, Any] | None
     task_id = str(task.get("id") or "").strip()
     task_name = str(task.get("name") or "").strip()
     if task_id and task_name:
-        rendered = naming_pattern.format(task_id=_safe_filename(task_id), task_name=_safe_filename(task_name))
+        command_for_pattern = command_value.strip() if isinstance(command_value, str) else ""
+        rendered = naming_pattern.format(
+            task_id=_safe_filename(task_id),
+            task_name=_safe_filename(task_name),
+            command=_safe_filename(command_for_pattern or task_id or task_name),
+        )
         candidates.append(layer_dir / cmd_dir / rendered)
 
     for p in candidates:
@@ -831,9 +837,10 @@ def _infer_task_deliverables(layer_dir: Path, task: dict[str, Any], command_path
 
 def _task_status_is_done(status: str) -> bool:
     # Status values vary by program. Treat these as "done" for ETA purposes.
+    # - done: finished (common)
     # - completed: finished
     # - verified: finished + reviewed/verified (common in some programs)
-    return status.strip().lower() in {"completed", "verified"}
+    return status.strip().lower() in {"done", "completed", "verified"}
 
 
 def _build_layer_info(base_dir: Path, layer_dir: Path) -> LayerInfo:
