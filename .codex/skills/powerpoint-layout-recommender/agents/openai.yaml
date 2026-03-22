@@ -1,0 +1,4 @@
+interface:
+  display_name: "PowerPoint Layout Recommender"
+  short_description: "Recommend PowerPoint layouts from content"
+  default_prompt: "Use $powerpoint-layout-recommender to choose slide layouts and structure a deck from my content."
