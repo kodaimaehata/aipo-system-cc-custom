@@ -101,7 +101,7 @@ programs/P####_{project名}/
 - `generated_at`
 - `context_documents[]`（`path` と `summary` を持つ）
 
-オプションフィールド（v1.1）:
+オプションフィールド（v1.2）:
 - `context_collection` - コンテキスト収集方法の設定
 - `context_documents[].source_method` - 各ドキュメントの収集元
 
@@ -116,10 +116,15 @@ programs/P####_{project名}/
   "generated_at": "2025-12-29",
   "parent_context_dir": null,
   "context_collection": {
-    "methods": ["local_workspace", "web_search"],
+    "methods": ["local_workspace", "active_projects", "web_search"],
     "local_workspace_config": {
-      "priority_folders": ["src/", "docs/"],
+      "priority_folders": ["src/", "docs/", "flows/"],
       "perspectives": ["technical", "business"]
+    },
+    "active_projects_config": {
+      "base_dir": "programs",
+      "include_archived": false,
+      "selection_basis": "goal_relevance"
     },
     "web_search_config": {
       "prefer_primary_sources": true,
@@ -139,10 +144,22 @@ programs/P####_{project名}/
       "source_method": "local_workspace"
     },
     {
+      "name": "Related Active Projects",
+      "path": "context/03_related_active_projects.md",
+      "summary": "archivedを除く現行プロジェクトから再利用価値のある制約・成果物・意思決定を要約",
+      "source_method": "active_projects"
+    },
+    {
       "name": "Constraints",
       "path": "context/02_constraints.md",
       "summary": "制約（期限・予算・技術・法務など）",
       "source_method": "local_workspace"
+    },
+    {
+      "name": "External Signals",
+      "path": "context/04_external_signals.md",
+      "summary": "市場・競合・規制・仕様など外部環境の最新情報を要約",
+      "source_method": "web_search"
     }
   ]
 }
@@ -152,8 +169,9 @@ programs/P####_{project名}/
 
 | フィールド | 説明 |
 |-----------|------|
-| `methods` | 選択された収集方法の配列: `local_workspace`, `web_search`, `external_paths` |
-| `local_workspace_config` | ワークスペース検索の設定（優先フォルダ、検索観点） |
+| `methods` | 選択された収集方法の配列: `local_workspace`, `active_projects`, `web_search`, `external_paths` |
+| `local_workspace_config` | ワークスペース検索の設定（優先フォルダ、検索観点）。`flows/` も通常の候補に含めてよい |
+| `active_projects_config` | `programs/` 配下の進行中AIPOプロジェクト検索設定（archivedを通常除外） |
 | `web_search_config` | Web検索の設定（一次情報優先、キーワード） |
 | `external_paths_config` | 外部パスの設定（対象パス一覧） |
 | `collected_at` | 収集実行日（ISO日付） |

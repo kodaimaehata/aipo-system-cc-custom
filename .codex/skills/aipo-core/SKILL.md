@@ -20,17 +20,23 @@ description: "Core schemas, directory layout, and operating rules for the AIPO (
   - `programs/` 構造と schema: `.codex/skills/aipo-workflow/references/program-schema.md`
   - フェーズ運用: `.codex/skills/aipo-workflow/references/workflow.md`
 
-## Context Collection Methods（v1.1）
+## Context Collection Methods（v1.2）
 
 Senseフェーズで使用可能なコンテキスト収集方法:
 
 | ID | 名称 | 説明 |
 |----|------|------|
-| `local_workspace` | ローカル検索（ワークスペース） | ワークスペース内のGoal関連情報を検索 |
+| `local_workspace` | ローカル検索（ワークスペース） | ワークスペース内のGoal関連情報を検索。`src/` `docs/` に加え、`flows/` の作業ログやメモも必要に応じて含める |
+| `active_projects` | ローカル検索（進行中AIPOプロジェクト） | `programs/` 配下の**archivedを除く現行プロジェクト/サブレイヤー**から、Goal関連情報・制約・既存成果物を収集 |
 | `web_search` | Web検索 | インターネットからGoal関連情報を収集 |
 | `external_paths` | ローカル検索（指定フォルダ） | ユーザー指定フォルダ/ファイルから収集 |
 
 `context.yaml` の `context_collection` フィールドに選択結果を記録する（詳細は `program-schema.md` 参照）。
+
+推奨:
+- Senseでは `local_workspace` に加えて、必要に応じて `active_projects` を使い、過去のアーカイブ知見だけでなく**進行中プロジェクトの類似成果物や制約**も参照する。
+- 外部環境に依存するGoal（市場、規制、競合、製品仕様、価格、トレンドなど）は `web_search` を併用する。特に時間変化しやすい情報は、ワークスペース内資料だけで完結させない。
+- `flows/` は会話由来のメモ、調査下書き、途中整理の置き場として有効なため、Senseでは通常のワークスペース資料と同様に参照候補へ含める。
 
 ## JSON-Compatible YAML（必須）
 

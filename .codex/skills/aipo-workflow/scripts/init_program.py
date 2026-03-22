@@ -149,6 +149,13 @@ def _build_context_yaml(args: InitArgs, *, layer_id: str) -> dict:
                 "perspectives": [],
             }
 
+        if "active_projects" in args.context_methods:
+            context_collection["active_projects_config"] = {
+                "base_dir": "programs",
+                "include_archived": False,
+                "selection_basis": "goal_relevance",
+            }
+
         if "web_search" in args.context_methods:
             context_collection["web_search_config"] = {
                 "prefer_primary_sources": True,
@@ -218,7 +225,7 @@ def main() -> int:
     parser.add_argument(
         "--context-methods",
         default=None,
-        help="Comma-separated context collection methods: local_workspace,web_search,external_paths",
+        help="Comma-separated context collection methods: local_workspace,active_projects,web_search,external_paths",
     )
     parser.add_argument(
         "--priority-folders",

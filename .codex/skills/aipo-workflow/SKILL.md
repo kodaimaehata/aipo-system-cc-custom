@@ -1,6 +1,6 @@
 ---
 name: aipo-workflow
-description: "AIPO (AI Product Owner) workflow for Codex CLI. Use to run Sense→Focus→Discover→Deliver→Operation as file-based artifacts under programs/P####_{project} (layer.yaml/context.yaml/tasks.yaml/commands). Include archive/reuse workflows: completed or suspended projects are moved via aipo-archive-project and historical context can be reused in Sense via programs/archived_projects.md."
+description: "AIPO (AI Product Owner) workflow for Codex CLI. Use to run Sense→Focus→Discover→Deliver→Operation as file-based artifacts under programs/P####_{project} (layer.yaml/context.yaml/tasks.yaml/commands). Include archive/reuse workflows: completed or suspended projects are moved via aipo-archive-project, and Sense can reuse context from archived projects, active projects, and web research when relevant."
 ---
 
 # AIPO Workflow

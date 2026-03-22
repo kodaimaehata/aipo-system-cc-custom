@@ -13,9 +13,9 @@
    - 選択基準（例）: project_name / layer_id / layer_name / 目的（goal.description）
 5. `Flow/` はこのリポジトリではレガシー扱い
    - ユーザーが明示した場合のみ扱う
+   - ただし `flows/` は別物で、Sense のコンテキスト収集対象として扱ってよい
 
 ## 最小チェック（安全策）
 
 - ルートと判断したフォルダに `layer.yaml` が存在すること
 - `context.yaml` / `tasks.yaml` が無い場合は、どのフェーズの前提かを確認してから生成/更新する
-
