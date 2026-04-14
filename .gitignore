@@ -8,6 +8,7 @@ reviews/*
 /.claude/skills/aipo/*
 /.cursor/commands/aipo/*
 /.cursor/skills/aipo/*
+/.superset
 tmp/*
 
 # Original aipo-system 
