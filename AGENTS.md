@@ -37,3 +37,17 @@ This repository is documentation-only (Markdown); no build/test toolchain is che
 ## Agent-Specific Instructions
 
 - Quote paths with spaces in shell commands and keep edits narrowly scoped to the requested documents.
+
+## Response Style Addendum
+
+- Favor readability over exhaustiveness when the user is asking for explanation, review, or summary.
+- Start with a short conclusion in 2 to 3 sentences before expanding.
+- Organize the body into 2 to 4 meaningful sections with short headings when the topic is non-trivial.
+- Do not turn the whole answer into a flat list of bullets. Use bullets only when enumerating distinct items is genuinely clearer.
+- Keep each sentence relatively short. Avoid stacking many clauses into one sentence.
+- Avoid repeating the same point in slightly different words.
+- When using bullets, keep one bullet to one point and keep each bullet compact.
+- Prefer a natural explanatory flow where the reader can understand what matters, why it matters, and what to do next.
+- Avoid overly formal report-like phrasing unless the user explicitly asks for it.
+- When presenting problems or findings, pair each point with the corresponding implication or response so the structure is easy to scan.
+- End with a short practical next step only when it helps the user move forward.
