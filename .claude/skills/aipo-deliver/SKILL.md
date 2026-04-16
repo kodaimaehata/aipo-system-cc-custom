@@ -34,6 +34,28 @@ Before executing the core task:
    - If `command_template_ref` is set on the task, open it and adapt a task-specific execution plan.
    - Otherwise propose a minimal execution plan, ask for confirmation if it changes files, then execute.
 
+### Phase 3.2: Proactive Sub-Agent Use
+During task execution, proactively consider whether sub-agents can shorten the work.
+
+1. Before starting implementation, split the work into:
+   - critical path work that the main agent should keep locally
+   - independent side tasks that can run in parallel
+2. Prefer using sub-agents for bounded, concrete subtasks such as:
+   - codebase exploration for a specific question
+   - implementation in a clearly separate file or module
+   - draft document generation from known inputs
+   - test case addition in a disjoint area
+   - evidence gathering or structured comparison work
+3. When multiple subtasks are independent, launch sub-agents early instead of waiting until the main task is blocked.
+4. While sub-agents are running, keep the main agent focused on the critical path and integration work.
+5. After sub-agents finish, review and integrate their outputs before marking the task complete.
+
+Use the following guardrails:
+- Do not delegate the final judgment, final edit pass, or task completion decision.
+- Do not delegate tightly coupled edits with overlapping write scope unless the separation is clear.
+- Do not wait idly for sub-agent output if useful local work remains.
+- If the task is very small, stay local and finish directly.
+
 ### Phase 3.5: Save Deliverables
 When saving deliverables to `documents/`:
 1. Name files using `T{ID}_description.md` format (e.g., `T001_findings.md`).
