@@ -34,9 +34,12 @@ description: "AIPO Focus phase for Codex CLI. Decompose a layer goal into SubLay
 ## 4) `tasks.yaml` 更新（JSON互換YAML）
 
 - `tasks.yaml.tasks[]` の必須:
-  - `type` が `management` / `coordination` / `verification` の場合のみ `command: null` を許可
-  - それ以外は `command` を必須（例: `"T003_競合調査"`）
+  - `type` が `management` / `coordination` / `verification` の場合、`command` は `null` にする
+  - 上記以外は `command` を必須（例: `"T003_競合調査"`）
   - `command_template_ref` は分かれば設定、無ければ `null`
+- 実務メモ:
+  - `verification` / `coordination` / `management` タスクに非nullの `command` を入れると、`validate_program.py` は `tasks.tasks[i].command must be null for management/coordination/verification` で失敗する
+  - Focus 後は `python3 .codex/skills/aipo-workflow/scripts/validate_program.py --path "<layer_dir>"` をすぐ回し、型と `command` 制約のズレを早めに潰す
 
 スキーマ/例: `.codex/skills/aipo-workflow/references/program-schema.md`
 
