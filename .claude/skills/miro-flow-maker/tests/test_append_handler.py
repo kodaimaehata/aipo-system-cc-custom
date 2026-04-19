@@ -1437,6 +1437,130 @@ class TestAppendHandlerAutoFrame:
             import shutil
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def test_empty_frame_first_lane_top_equals_frame_padding(self) -> None:
+        """P2-1: 空 frame に append した場合、最初の lane top が丁度
+        ``FRAME_PADDING = 50`` に配置されることを回帰固定する。
+
+        append_handler の empty-frame 分岐 (occupied_bottom == 0 → offset_y = 0)
+        で、render 時に to_frame_local_center が +FRAME_PADDING するため、
+        結果的に miro 座標上の lane top は FRAME_PADDING と一致する。これは
+        ``build_drawing_plan()`` (create mode) の first-run 配置規約と整合する。
+        """
+        from miro_flow_maker.layout import FRAME_PADDING
+
+        confirmed = _replace_flow_group_id(
+            _load_confirmed_input(), "flow-auto-frame-empty-padding"
+        )
+        # 既存 frame なし（auto-frame で新規 frame を作る直後の状態）
+        client = _make_mock_client_for_append(board_items=[])
+        client.create_frame.return_value = {
+            "id": "new-frame-empty",
+            "type": "frame",
+        }
+        handler = AppendHandler(client)
+
+        tmpdir = tempfile.mkdtemp(prefix="miro_app_test_")
+        try:
+            context = _make_context(
+                board_id="board-001",
+                frame_id=None,
+                frame_link=None,
+                auto_frame=True,
+            )
+            config = _make_config(tmpdir)
+            result = handler.execute(confirmed, context, config)
+
+            assert result.success is True, result.stop_reasons
+            # 最初の create_shape 呼び出し = 最初の lane
+            first_lane_call = client.create_shape.call_args_list[0]
+            center_y = first_lane_call.kwargs.get("y")
+            height = first_lane_call.kwargs.get("height")
+            assert center_y is not None
+            assert height is not None
+            top = center_y - height / 2.0
+            # 空 frame の場合、first lane top はちょうど FRAME_PADDING
+            assert top == pytest.approx(float(FRAME_PADDING)), (
+                f"first lane top={top}, expected={float(FRAME_PADDING)} "
+                f"(empty-frame の contract: offset_y=0 → render 時 "
+                f"+FRAME_PADDING で top=FRAME_PADDING)"
+            )
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_auto_frame_placement_uses_different_frames_for_max_right_and_min_top(
+        self,
+    ) -> None:
+        """P2-2: ``_compute_auto_frame_placement`` が ``max_right`` と ``min_top``
+        を異なる frame から取れることを検証する。
+
+        board:
+        - frame A: center=(2000, 100), w=500, h=200 → right=2250, top=0
+        - frame B: center=(500, -300), w=600, h=400 → right=800, top=-500
+
+        → max_right=2250 (frame A) / min_top=-500 (frame B)
+        → new_left = 2250 + FRAME_MARGIN(200) = 2450
+        → new_cx = 2450 + plan.frame.width/2
+        → new_cy = -500 + plan.frame.height/2
+        """
+        from miro_flow_maker.append_handler import FRAME_MARGIN
+
+        confirmed = _replace_flow_group_id(
+            _load_confirmed_input(), "flow-auto-frame-mixed-source"
+        )
+        board_items = [
+            {
+                "id": "fA",
+                "type": "frame",
+                "data": {"title": "A"},
+                "position": {"x": 2000.0, "y": 100.0},
+                "geometry": {"width": 500.0, "height": 200.0},
+            },
+            {
+                "id": "fB",
+                "type": "frame",
+                "data": {"title": "B"},
+                "position": {"x": 500.0, "y": -300.0},
+                "geometry": {"width": 600.0, "height": 400.0},
+            },
+        ]
+        client = _make_mock_client_for_append(board_items=board_items)
+        client.create_frame.return_value = {
+            "id": "new-frame-mixed", "type": "frame",
+        }
+        handler = AppendHandler(client)
+
+        tmpdir = tempfile.mkdtemp(prefix="miro_app_test_")
+        try:
+            context = _make_context(
+                board_id="board-001",
+                frame_id=None,
+                frame_link=None,
+                auto_frame=True,
+            )
+            config = _make_config(tmpdir)
+            handler.execute(confirmed, context, config)
+
+            client.create_frame.assert_called_once()
+            kwargs = client.create_frame.call_args.kwargs
+            plan_w = kwargs["width"]
+            plan_h = kwargs["height"]
+            # max_right は frame A (2250) から
+            expected_cx = 2250.0 + FRAME_MARGIN + plan_w / 2.0
+            assert kwargs["x"] == expected_cx, (
+                f"new_cx={kwargs['x']}, expected={expected_cx} "
+                f"(max_right=2250 from frame A)"
+            )
+            # min_top は frame B (-500) から
+            expected_cy = -500.0 + plan_h / 2.0
+            assert kwargs["y"] == expected_cy, (
+                f"new_cy={kwargs['y']}, expected={expected_cy} "
+                f"(min_top=-500 from frame B)"
+            )
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def test_auto_frame_with_explicit_frame_id_prefers_explicit(self) -> None:
         """auto_frame=True でも frame_id が明示されていれば explicit が優先され、create_frame は呼ばれない。"""
         confirmed = _replace_flow_group_id(
