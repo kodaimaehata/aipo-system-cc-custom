@@ -56,6 +56,17 @@ Use the following guardrails:
 - Do not wait idly for sub-agent output if useful local work remains.
 - If the task is very small, stay local and finish directly.
 
+For larger Deliver passes spanning multiple tasks or workstreams, use this orchestration pattern:
+- Read the command set first and group work into independent batches such as design docs, implementation, and verification.
+- Launch non-conflicting batches to separate sub-agents early instead of serializing everything in the main agent.
+- While sub-agents run, keep the main agent moving on integration checks, additional reading, and validation setup.
+- After implementation or document drafting, run an independent reviewer sub-agent before treating the work as done.
+  - First pass: spec / acceptance-criteria review
+  - Second pass: quality, consistency, and downstream handoff review
+- If review feedback requires changes, route the fixes back through a sub-agent when appropriate, then re-run review.
+- Do not mark `tasks.yaml` as `completed` until deliverables exist, independent review passes, and the main validation steps are done.
+- Even for document-oriented Deliver work, verify with concrete artifacts when possible (generated files, import checks, validators, or smoke tests).
+
 ### Phase 3.5: Save Deliverables
 When saving deliverables to `documents/`:
 1. Name files using `T{ID}_description.md` format (e.g., `T001_findings.md`).
@@ -63,5 +74,5 @@ When saving deliverables to `documents/`:
 3. See aipo-core "Document Naming Convention" for full rules.
 
 ### Phase 4: Feedback
-1. Update `tasks.yaml`: Mark task as `completed`.
-2. Report deliverables to the user.
+1. Update `tasks.yaml`: Mark the task as `completed` only after deliverables exist, independent review is complete, and the main validation steps have passed.
+2. Report deliverables and validation/review results to the user.

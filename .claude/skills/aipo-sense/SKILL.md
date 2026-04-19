@@ -59,6 +59,12 @@ Use local workspace search/read tools (e.g., `ls`, `rg`) to gather context relev
 - **Team Structure**: Who is involved?
 - **Existing Resources**: Related code, docs, rules.
 - **Constraints**: Deadlines, tech stack.
+- Include reusable workspace assets beyond `src/` and `docs/`, especially:
+  - `flows/` conversation logs, research notes, and draft artifacts
+  - `mini-projects/` brief / requirements / design / plan / review artifacts from similar lightweight tools or PoCs
+- If `programs/archived_projects.md` exists, use it as a source of prior constraints, success criteria, and failure patterns.
+- Also inspect active AIPO projects under `programs/` excluding archived projects when nearby goals, deliverables, or decision logs may help.
+- Avoid copying the target layer's own content back into itself; summarize reusable findings from other projects instead.
 
 **Action**: Create markdown files in `context/`:
 - `01_team.md`

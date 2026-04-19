@@ -75,9 +75,13 @@ programs/
   "generated_at": "YYYY-MM-DD",
   "parent_context_dir": null,
   "context_collection": {
-    "methods": ["local_workspace", "web_search", "external_paths"],
+    "methods": ["local_workspace", "active_projects", "web_search", "external_paths"],
     "local_workspace_config": {
       "priority_folders": [],
+      "perspectives": []
+    },
+    "active_projects_config": {
+      "include_archived": false,
       "perspectives": []
     },
     "web_search_config": {
@@ -102,12 +106,19 @@ programs/
 ```
 
 **`context_collection` Field (Optional):**
-- `methods`: Array of collection method IDs (`local_workspace`, `web_search`, `external_paths`)
+- `methods`: Array of collection method IDs (`local_workspace`, `active_projects`, `web_search`, `external_paths`)
 - `*_config`: Configuration for each selected method
 - `confirmed_by`: Who confirmed the selection (`user`, `ai`, or `cli`)
 
 **`source_method` in context_documents (Optional):**
 - Tracks which collection method produced each document
+
+### Context Collection Guidance
+- `local_workspace` should search the active workspace for goal-relevant material across `src/`, `docs/`, `flows/`, and, when present, `mini-projects/`.
+- Treat `flows/` as a valid source of conversation-derived notes, research drafts, and intermediate artifacts.
+- Treat `mini-projects/` as a source of reusable small-project assets such as brief / requirements / design / plan / review documents, even when those artifacts are gitignored and local-only.
+- Use `active_projects` to inspect current AIPO work under `programs/` excluding archived projects when similar constraints, deliverables, or decisions may be reusable.
+- When the goal depends on external facts that may have changed over time, combine local evidence with `web_search` and prefer primary sources.
 
 #### tasks.yaml
 ```json
