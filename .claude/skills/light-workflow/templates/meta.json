@@ -1,0 +1,26 @@
+{
+  "title": "Example Tool Project",
+  "slug": "example-tool-project",
+  "goal": "Describe in one sentence what this mini-project should achieve.",
+  "status": "active",
+  "created_at": "2026-04-18",
+  "updated_at": "2026-04-18",
+  "path": "mini-projects/active/2026-04-18_example-tool-project",
+  "repo_paths": [],
+  "tech_stack": [],
+  "keywords": [
+    "tool",
+    "automation"
+  ],
+  "summary": "Short summary of the problem, approach, and current status.",
+  "important_files": [
+    "brief.md",
+    "requirements.md",
+    "design.md",
+    "plan.md",
+    "run_summary.md"
+  ],
+  "reuse_value": "unknown",
+  "related_runs": [],
+  "notes": ""
+}
