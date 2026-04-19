@@ -10,6 +10,7 @@ codex_review/*
 reviews/*
 /.claude/commands/aipo/*
 /.claude/skills/aipo/*
+/.claude/worktrees/
 /.cursor/commands/aipo/*
 /.cursor/skills/aipo/*
 /.superset
