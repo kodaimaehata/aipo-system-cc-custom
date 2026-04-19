@@ -676,3 +676,212 @@ class TestBuildIdMappingFromRunLog:
             ],
         )
         assert build_id_mapping_from_run_log(log) == {}
+
+
+# ---------------------------------------------------------------------------
+# SG4: top-level success field (write / load)
+# ---------------------------------------------------------------------------
+
+
+class TestRunLogSuccessField:
+    """SG4: run_log JSON に top-level success key を含め、load 時に後方互換する。"""
+
+    def test_write_run_log_includes_success_field_on_success(self) -> None:
+        """正常系 result → JSON の top-level に "success": true が含まれる。"""
+        result = _make_execution_result()
+        log = build_run_log(result, _make_metadata_map(), duration_ms=100)
+        assert log.success is True
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = write_run_log(log, tmpdir)
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        assert "success" in data
+        assert data["success"] is True
+
+    def test_write_run_log_success_false_on_failure(self) -> None:
+        """failed_count > 0 の result → JSON の "success": false。"""
+        result = ExecutionResult(
+            run_id="test-run-fail",
+            mode="create",
+            success=False,
+            board_id="board-001",
+            frame_id="frame-001",
+            flow_group_id="flow-rep-01",
+            dry_run=False,
+        )
+        result.item_results.append(ItemResult(
+            stable_item_id="flow-rep-01::lane::a-applicant::lane_shape",
+            semantic_type="lane",
+            semantic_id="a-applicant",
+            render_role="lane_shape",
+            action="create",
+            result="failed",
+            reason="API error: 500",
+        ))
+        result.failed_count = 1
+
+        log = build_run_log(result, {}, duration_ms=100)
+        assert log.success is False
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = write_run_log(log, tmpdir)
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        assert data["success"] is False
+
+    def test_write_run_log_success_false_on_partial(self) -> None:
+        """partial_success=True の result → JSON の "success": false。"""
+        result = _make_execution_result()
+        result.partial_success = True
+
+        log = build_run_log(result, _make_metadata_map(), duration_ms=100)
+        assert log.success is False
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = write_run_log(log, tmpdir)
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        assert data["success"] is False
+
+    def test_write_run_log_success_false_on_stopped(self) -> None:
+        """stopped_stage='reconcile' の result → JSON の "success": false。"""
+        result = _make_execution_result()
+        result.stopped_stage = "reconcile"
+
+        log = build_run_log(result, _make_metadata_map(), duration_ms=100)
+        assert log.success is False
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = write_run_log(log, tmpdir)
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        assert data["success"] is False
+
+    def test_write_run_log_success_false_on_stop_reasons(self) -> None:
+        """stop_reasons が非空の result → JSON の "success": false。"""
+        result = _make_execution_result()
+        result.stop_reasons.append("board 解決失敗")
+
+        log = build_run_log(result, _make_metadata_map(), duration_ms=100)
+        assert log.success is False
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = write_run_log(log, tmpdir)
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        assert data["success"] is False
+
+    def test_load_run_log_synthesizes_success_when_missing_normal(self) -> None:
+        """success key 無しの旧形式 JSON（正常系）→ 合成で success=True。"""
+        legacy_data = {
+            "run_id": "legacy-ok-001",
+            "timestamp": "2026-04-15T07:13:59.370599+00:00",
+            "mode": "create",
+            "board_id": "board-legacy",
+            "frame_id": "frame-legacy",
+            "flow_group_id": "flow-legacy-01",
+            "dry_run": False,
+            "created_count": 3,
+            "updated_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0,
+            "stop_reasons": [],
+            "duration_ms": 1000,
+            "errors": [],
+            "item_results": [],
+            # success / partial_success / stopped_stage 無し
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "run_legacy-ok-001.json"
+            path.write_text(json.dumps(legacy_data), encoding="utf-8")
+            loaded = load_run_log(str(path))
+        assert loaded.success is True
+
+    def test_load_run_log_synthesizes_success_when_missing_failure(self) -> None:
+        """success key 無しの旧形式 JSON（失敗系）→ 合成で success=False。"""
+        legacy_data = {
+            "run_id": "legacy-fail-001",
+            "timestamp": "2026-04-15T07:13:59.370599+00:00",
+            "mode": "create",
+            "board_id": "board-legacy",
+            "frame_id": "frame-legacy",
+            "flow_group_id": "flow-legacy-01",
+            "dry_run": False,
+            "created_count": 1,
+            "updated_count": 0,
+            "skipped_count": 0,
+            "failed_count": 2,
+            "stop_reasons": [],
+            "duration_ms": 1000,
+            "errors": ["API error: 500", "API error: 429"],
+            "item_results": [],
+            # success 無し
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "run_legacy-fail-001.json"
+            path.write_text(json.dumps(legacy_data), encoding="utf-8")
+            loaded = load_run_log(str(path))
+        assert loaded.success is False
+
+    def test_load_run_log_preserves_success_when_present(self) -> None:
+        """"success": true が含まれる JSON を load → log.success == True をそのまま。"""
+        new_data = {
+            "run_id": "new-format-001",
+            "timestamp": "2026-04-18T00:00:00+00:00",
+            "mode": "create",
+            "board_id": "board-new",
+            "frame_id": "frame-new",
+            "flow_group_id": "flow-new-01",
+            "dry_run": False,
+            "created_count": 2,
+            "updated_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0,
+            "stop_reasons": [],
+            "duration_ms": 500,
+            "errors": [],
+            "item_results": [],
+            "partial_success": False,
+            "stopped_stage": None,
+            "rerun_eligible": True,
+            "success": True,
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "run_new-format-001.json"
+            path.write_text(json.dumps(new_data), encoding="utf-8")
+            loaded = load_run_log(str(path))
+        assert loaded.success is True
+
+    def test_load_run_log_preserves_success_false_when_present(self) -> None:
+        """"success": false が含まれる JSON を load → log.success == False をそのまま。
+
+        合成条件的には True に見えても、明示値を尊重する。
+        """
+        # 合成条件上は True だが success=False が明示されている
+        new_data = {
+            "run_id": "explicit-false-001",
+            "timestamp": "2026-04-18T00:00:00+00:00",
+            "mode": "create",
+            "board_id": "board-x",
+            "frame_id": "frame-x",
+            "flow_group_id": "flow-x-01",
+            "dry_run": False,
+            "created_count": 0,
+            "updated_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0,
+            "stop_reasons": [],
+            "duration_ms": 0,
+            "errors": [],
+            "item_results": [],
+            "partial_success": False,
+            "stopped_stage": None,
+            "rerun_eligible": True,
+            "success": False,
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "run_explicit-false-001.json"
+            path.write_text(json.dumps(new_data), encoding="utf-8")
+            loaded = load_run_log(str(path))
+        assert loaded.success is False

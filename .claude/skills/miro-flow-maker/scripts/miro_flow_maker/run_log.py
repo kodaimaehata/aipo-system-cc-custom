@@ -56,6 +56,45 @@ class RunLog:
     rerun_eligible: bool = True
     """SG3 追加: ExecutionResult.rerun_eligible の転記。"""
 
+    success: bool = False
+    """SG4 追加: 実行が完全に成功したかを示す top-level フラグ。
+
+    合成条件: ``failed_count == 0 AND len(stop_reasons) == 0 AND
+    not partial_success AND stopped_stage is None AND len(errors) == 0``。
+    ``build_run_log`` および ``load_run_log`` 欠落時補填は
+    ``_synthesize_success`` で一元計算する。
+    """
+
+
+# ---------------------------------------------------------------------------
+# success synthesis helper (SG4)
+# ---------------------------------------------------------------------------
+
+def _synthesize_success(
+    *,
+    failed_count: int,
+    stop_reasons: list[str] | tuple[str, ...],
+    partial_success: bool,
+    stopped_stage: str | None,
+    errors: list[str] | tuple[str, ...],
+) -> bool:
+    """SG4 契約の success 合成ロジック。
+
+    以下の 5 条件を全て満たすときのみ True:
+    - ``failed_count == 0``
+    - ``len(stop_reasons) == 0``
+    - ``not partial_success``
+    - ``stopped_stage is None``
+    - ``len(errors) == 0``
+    """
+    return (
+        failed_count == 0
+        and len(stop_reasons) == 0
+        and not partial_success
+        and stopped_stage is None
+        and len(errors) == 0
+    )
+
 
 # ---------------------------------------------------------------------------
 # build_run_log
@@ -127,6 +166,14 @@ def build_run_log(
         if ir.result == "failed" and ir.reason:
             errors.append(ir.reason)
 
+    success = _synthesize_success(
+        failed_count=result.failed_count,
+        stop_reasons=result.stop_reasons,
+        partial_success=result.partial_success,
+        stopped_stage=result.stopped_stage,
+        errors=errors,
+    )
+
     return RunLog(
         run_id=result.run_id,
         timestamp=timestamp,
@@ -146,6 +193,7 @@ def build_run_log(
         partial_success=result.partial_success,
         stopped_stage=result.stopped_stage,
         rerun_eligible=result.rerun_eligible,
+        success=success,
     )
 
 
@@ -209,6 +257,26 @@ def load_run_log(log_path: str) -> RunLog:
     if not isinstance(item_results, list):
         item_results = []
 
+    failed_count = int(data.get("failed_count", 0))
+    stop_reasons = list(data.get("stop_reasons", []) or [])
+    errors = list(data.get("errors", []) or [])
+    partial_success = bool(data.get("partial_success", False))
+    stopped_stage = data.get("stopped_stage")
+
+    # SG4: success の後方互換ロジック。
+    # - 存在すればそれを採用（新形式を尊重）。
+    # - 欠落していれば合成条件で計算（SG2 / SG4 初期の旧 run log）。
+    if "success" in data and data["success"] is not None:
+        success = bool(data["success"])
+    else:
+        success = _synthesize_success(
+            failed_count=failed_count,
+            stop_reasons=stop_reasons,
+            partial_success=partial_success,
+            stopped_stage=stopped_stage,
+            errors=errors,
+        )
+
     return RunLog(
         run_id=data["run_id"],
         timestamp=data["timestamp"],
@@ -220,15 +288,17 @@ def load_run_log(log_path: str) -> RunLog:
         created_count=int(data.get("created_count", 0)),
         updated_count=int(data.get("updated_count", 0)),
         skipped_count=int(data.get("skipped_count", 0)),
-        failed_count=int(data.get("failed_count", 0)),
-        stop_reasons=list(data.get("stop_reasons", []) or []),
+        failed_count=failed_count,
+        stop_reasons=stop_reasons,
         duration_ms=int(data.get("duration_ms", 0)),
-        errors=list(data.get("errors", []) or []),
+        errors=errors,
         item_results=list(item_results),
         # SG3 追加フィールド: 存在しない場合はデフォルト値を適用
-        partial_success=bool(data.get("partial_success", False)),
-        stopped_stage=data.get("stopped_stage"),
+        partial_success=partial_success,
+        stopped_stage=stopped_stage,
         rerun_eligible=bool(data.get("rerun_eligible", True)),
+        # SG4 追加フィールド: 欠落時は合成条件で計算
+        success=success,
     )
 
 
