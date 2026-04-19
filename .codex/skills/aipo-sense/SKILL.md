@@ -44,7 +44,7 @@ python3 .codex/skills/aipo-workflow/scripts/sync_sublayers.py --path "<parent_la
 - `context/` に前提情報をMarkdownで追加・更新する（例: `01_overview.md`, `02_constraints.md`, `03_resources.md`）。
 - `context.yaml.context_documents[]` に「パス」と「要約」を追加・更新する。
 - 必要に応じて親の文脈を参照できるように `context.yaml.parent_context_dir` を維持する（SubLayerの場合は script が設定する）。
-- ワークスペース探索では `src/` や `docs/` だけでなく、`flows/` 配下の会話ログ、調査メモ、下書き成果物も収集対象に含める。
+- ワークスペース探索では `src/` や `docs/` だけでなく、`flows/` 配下の会話ログ、調査メモ、下書き成果物、および `mini-projects/` 配下の brief / requirements / design / plan / review などの小規模開発資産も収集対象に含める。
 - `programs/archived_projects.md` がある場合、過去にアーカイブされたプロジェクトの「目的（purpose）」と「実施内容（activities）」から、再利用価値のある制約・成功条件・失敗事例を必要に応じて `context_documents` に反映する。
 - `programs/` 配下の **archived を除く現行プロジェクト / SubLayer** も収集対象に含める。類似Goal、近い制約、再利用できる成果物、既存の意思決定ログがあれば `context/` に要約して取り込む。
 - ただし、対象レイヤー自身の内容をそのまま自己参照で複製しない。別プロジェクト・別SubLayerの知見を優先し、参照元は要約して残す。
