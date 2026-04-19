@@ -1,5 +1,9 @@
 # Ignore per-project program repos (each is its own git repo under programs/)
 programs/*
+
+# Keep lightweight mini-project artifacts completely local-only
+/mini-projects/
+
 docs/*
 flows/*
 codex_review/*
