@@ -1,0 +1,42 @@
+{
+  "document_set": {
+    "id": "ds-001",
+    "label": "稟議承認フロー文書セット"
+  },
+  "flow_group": {
+    "id": "flow-approval-01",
+    "label": "稟議承認フロー"
+  },
+  "actors": [
+    {
+      "id": "a-01",
+      "label": "申請者",
+      "kind": "person"
+    }
+  ],
+  "systems": [],
+  "nodes": [
+    {
+      "id": "n-01",
+      "type": "start",
+      "label": "申請開始",
+      "actor_id": "a-01"
+    }
+  ],
+  "edges": [],
+  "system_accesses": [],
+  "status": "confirmed",
+  "confirmation_packet_ref": "packets/cp-001.json",
+  "source_evidence": [
+    {
+      "ref": "docs/business-rules.md#section-3",
+      "description": "稟議規程第3条"
+    }
+  ],
+  "metadata": {
+    "project_id": "P0006",
+    "layer_id": "P0006-SG2",
+    "managed_by": "miro-flow-maker",
+    "update_mode": "managed"
+  }
+}

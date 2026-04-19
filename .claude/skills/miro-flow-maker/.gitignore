@@ -1,0 +1,43 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# SG4 smoke で生成した派生 fixture（正式 fixture ではないので管理外）
+tests/fixtures/confirmed_representative_update.json
+tests/fixtures/confirmed_representative_update_broken.json
+tests/fixtures/confirmed_representative_update_orphan.json
+tests/fixtures/confirmed_representative_append.json
+
+# 業務記述文（confirmation packet）の保存先 — SKILL.md Stage 1 で使用
+packets/
+
+# 実行時に作成される run log のバックアップ退避先
+logs_backup_*/

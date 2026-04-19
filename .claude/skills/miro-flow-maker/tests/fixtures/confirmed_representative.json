@@ -1,0 +1,150 @@
+{
+  "document_set": {
+    "id": "ds-rep-001",
+    "label": "代表ケース文書セット"
+  },
+  "flow_group": {
+    "id": "flow-rep-01",
+    "label": "稟議承認フロー（代表ケース）"
+  },
+  "actors": [
+    {
+      "id": "a-applicant",
+      "label": "申請者",
+      "kind": "person"
+    },
+    {
+      "id": "a-manager",
+      "label": "上長",
+      "kind": "person"
+    },
+    {
+      "id": "a-accounting",
+      "label": "経理部",
+      "kind": "department"
+    }
+  ],
+  "systems": [
+    {
+      "id": "s-erp",
+      "label": "ERP システム",
+      "kind": "external_system"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n-start",
+      "type": "start",
+      "label": "申請開始",
+      "actor_id": "a-applicant"
+    },
+    {
+      "id": "n-fill-form",
+      "type": "process",
+      "label": "申請書記入",
+      "actor_id": "a-applicant"
+    },
+    {
+      "id": "n-review",
+      "type": "process",
+      "label": "上長確認",
+      "actor_id": "a-manager"
+    },
+    {
+      "id": "n-approve-check",
+      "type": "decision",
+      "label": "承認可否",
+      "actor_id": "a-manager"
+    },
+    {
+      "id": "n-accounting-process",
+      "type": "process",
+      "label": "経理処理",
+      "actor_id": "a-accounting"
+    },
+    {
+      "id": "n-end",
+      "type": "end",
+      "label": "完了",
+      "actor_id": "a-accounting"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-01",
+      "from_node_id": "n-start",
+      "to_node_id": "n-fill-form",
+      "kind": "business_flow",
+      "label": ""
+    },
+    {
+      "id": "e-02",
+      "from_node_id": "n-fill-form",
+      "to_node_id": "n-review",
+      "kind": "business_flow",
+      "label": "提出"
+    },
+    {
+      "id": "e-03",
+      "from_node_id": "n-review",
+      "to_node_id": "n-approve-check",
+      "kind": "business_flow",
+      "label": ""
+    },
+    {
+      "id": "e-04",
+      "from_node_id": "n-approve-check",
+      "to_node_id": "n-accounting-process",
+      "kind": "business_flow",
+      "label": "承認"
+    },
+    {
+      "id": "e-05",
+      "from_node_id": "n-approve-check",
+      "to_node_id": "n-fill-form",
+      "kind": "business_flow",
+      "label": "差戻"
+    },
+    {
+      "id": "e-06",
+      "from_node_id": "n-accounting-process",
+      "to_node_id": "n-end",
+      "kind": "business_flow",
+      "label": ""
+    }
+  ],
+  "system_accesses": [
+    {
+      "id": "sa-01",
+      "from_node_id": "n-fill-form",
+      "system_id": "s-erp",
+      "action": "create_request",
+      "label": "申請登録"
+    },
+    {
+      "id": "sa-02",
+      "from_node_id": "n-accounting-process",
+      "system_id": "s-erp",
+      "action": "update_ledger",
+      "label": "仕訳登録"
+    }
+  ],
+  "status": "confirmed",
+  "confirmation_packet_ref": "packets/cp-rep-001.json",
+  "source_evidence": [
+    {
+      "ref": "docs/business-rules.md#section-3",
+      "description": "稟議規程第3条"
+    },
+    {
+      "ref": "docs/accounting-manual.md#chapter-2",
+      "description": "経理処理マニュアル"
+    }
+  ],
+  "metadata": {
+    "project_id": "P0006",
+    "layer_id": "P0006-SG2",
+    "managed_by": "miro-flow-maker",
+    "update_mode": "managed"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "document_set": {
+    "id": "ds-002",
+    "label": "候補フロー文書セット"
+  },
+  "flow_group": {
+    "id": "flow-candidate-01",
+    "label": "候補フロー"
+  },
+  "actors": [],
+  "systems": [],
+  "nodes": [],
+  "edges": [],
+  "system_accesses": [],
+  "status": "candidate",
+  "confirmation_packet_ref": "",
+  "source_evidence": [],
+  "metadata": {
+    "project_id": "P0006",
+    "layer_id": "P0006-SG2",
+    "managed_by": "miro-flow-maker",
+    "update_mode": "managed"
+  }
+}
