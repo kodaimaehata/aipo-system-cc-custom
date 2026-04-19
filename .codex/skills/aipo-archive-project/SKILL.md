@@ -1,43 +1,72 @@
 ---
 name: aipo-archive-project
-description: Archive AIPO projects by moving a project folder under programs/archived and recording purpose + activities (and artifact summary) into programs/archived_projects.md for later reuse by aipo-sense.
+description: Archive an AIPO project by moving a project folder under programs/archived and recording purpose + activities (and artifact summary) into programs/archived_projects.md.
+version: 1.0.0
+author: Hermes Agent
+license: MIT
 ---
 
 # AIPO Project Archive
 
-## Overview
+Use this skill when the user wants to archive, retire, suspend, or close a project under `programs/`.
 
-`aipo-archive-project` は、終了・保留・中断した AIPO プロジェクトをアーカイブします。  
-対象プロジェクトを `programs/archived` に移動し、`programs/archived_projects.md` に内容要約を追記します。
+## What this skill does
 
-既定の対象ルートは `programs` です。必要に応じて `--base-dir` で別のルートを指定できます。
+- Moves the target project directory into `programs/archived/`
+- Appends a summary row to `programs/archived_projects.md`
+- Records `purpose`, `activities`, source path, archive path, artifact summary, and an optional note
+
+## Preconditions
+
+Before running the archive script:
+
+1. Confirm you are in the target repository root, or pass `--base-dir` explicitly.
+2. Resolve the target project uniquely.
+3. If the user provided a partial name and it is ambiguous, ask which project to archive.
+4. Because this operation moves directories, confirm intent if the target is not explicit.
 
 ## Command
 
+Run from the repository root:
+
 ```bash
-python3 .codex/skills/aipo-archive-project/scripts/archive_project.py "<project-or-path>"
+python3 ~/.hermes/skills/aipo-archive-project/scripts/archive_project.py "<project-or-path>"
 ```
 
-オプション:
+Options:
 
-- `--base-dir "programs"`: プロジェクト検索ルート（既定: `programs`）
-- `--archive-dir "programs/archived"`: アーカイブ先（既定: `--base-dir/archived`）
-- `--record-file "programs/archived_projects.md"`: 履歴記録先（既定）
-- `--note "..."`: 履歴メモ
-- `--purpose "..."`: プロジェクト目的（省略時は `layer.yaml` 等から推定）
-- `--activities "..."`: 実施内容（省略時は主要ファイル構成・タスク情報から推定）
+- `--base-dir "programs"`: project search root (default: `programs`)
+- `--archive-dir "programs/archived"`: archive destination (default: `--base-dir/archived`)
+- `--record-file "programs/archived_projects.md"`: archive metadata file (default)
+- `--note "..."`: optional memo
+- `--purpose "..."`: project purpose to record; inferred from `layer.yaml` or docs if omitted
+- `--activities "..."`: activity summary to record; inferred from `tasks.yaml` and artifacts if omitted
 
-## 実行方法
+## Procedure
 
-1. `"<project-or-path>"` を指定する。  
-   - フルパス（既存ディレクトリ）
-   - `programs` 配下のフォルダ名（省略可）
-2. 実行すると、対象が `programs/archived` へ移動される。
-3. 同時に `programs/archived_projects.md` に記録を追記する。  
-   追記項目: `archived_at`, `project_name`, `purpose`, `activities`, `source_path`, `archive_path`, `summary`（アーティファクト構成）, `note`
-4. 結果を報告し、必要なら `aipo-sense` の再実行前に `archived_projects.md` を確認する。
+1. Resolve the target from either:
+   - a full existing directory path, or
+   - a unique folder name under `programs/`
+2. Run:
 
-## aipo-sense 連携
+```bash
+python3 ~/.hermes/skills/aipo-archive-project/scripts/archive_project.py "<project-or-path>"
+```
 
-`aipo-sense` では、Sense 作業時に `programs/archived_projects.md` の過去エントリを参照して、
-類似案件の失敗条件・制約・成功基準・アーティファクト構成をコンテキストに追加する。
+3. The script moves the project to `programs/archived/`.
+4. The script appends a row to `programs/archived_projects.md` with:
+   - `archived_at`
+   - `project_name`
+   - `purpose`
+   - `activities`
+   - `source_path`
+   - `archive_path`
+   - `summary`
+   - `note`
+5. Report the resulting source path, archive path, and record file to the user.
+
+## Notes
+
+- This skill assumes the repository uses the AIPO `programs/` layout.
+- If the repository root is not the current working directory, either `cd` there first or pass `--base-dir` and related paths explicitly.
+- `programs/archived_projects.md` can later be used by AIPO sense/discovery workflows as historical context.
