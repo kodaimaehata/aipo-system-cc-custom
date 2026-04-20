@@ -1,0 +1,38 @@
+[project]
+name = "office-automation"
+version = "0.1.0"
+description = "Shared Office and PDF automation runtime for SG1 V1 scope"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+office-edit = [
+  "openpyxl>=3.1",
+  "pandas>=2.0",
+  "xlsxwriter>=3.1",
+  "python-docx>=1.1",
+  "docxtpl>=0.16",
+  "docx2python>=2.0",
+  "lxml>=5.0",
+  "python-pptx>=0.6",
+]
+pdf = [
+  "pymupdf>=1.24",
+  "pypdf>=4.0",
+  "pdfplumber>=0.11",
+  "reportlab>=4.0",
+]
+anonymize = [
+  "pillow>=10.0",
+]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/office_automation"]

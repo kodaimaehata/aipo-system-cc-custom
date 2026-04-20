@@ -1,0 +1,38 @@
+{
+  "comments": {
+    "enabled": true,
+    "action": "remove"
+  },
+  "notes": {
+    "enabled": true,
+    "action": "remove"
+  },
+  "headers": {
+    "enabled": true,
+    "action": "remove"
+  },
+  "footers": {
+    "enabled": true,
+    "action": "remove"
+  },
+  "metadata": {
+    "enabled": true,
+    "action": "clear"
+  },
+  "images": {
+    "enabled": true,
+    "mode": "report_only",
+    "replacement_path": null,
+    "mask_color": "#000000",
+    "confirmation_required": true
+  },
+  "body_text": {
+    "enabled": true,
+    "mode": "report_only",
+    "confirmation_required": true,
+    "replacement_text": "[REDACTED]",
+    "report_low_confidence": true,
+    "manual_review_for_pdf": true
+  },
+  "manual_review_required": true
+}
