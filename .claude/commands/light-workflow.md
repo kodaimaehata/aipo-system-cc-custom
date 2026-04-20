@@ -10,7 +10,7 @@ Loads the lightweight workflow skill for small tools, small apps, PoCs, and docu
 
 ## Inputs
 - Optional: goal, title, or short natural-language brief
-- Optional: existing run path such as `mini-projects/active/<date>_<slug>`
+- Optional: existing run path such as `mini-projects/active/M<NNNN>_<slug>`
 - Optional: desired slug or title for a new run
 
 ## Execution

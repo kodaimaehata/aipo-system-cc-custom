@@ -15,7 +15,7 @@
 ```text
 mini-projects/
   active/
-    2026-04-18_example-tool/
+    M0001_請求書CSVクリーナー/
       README.md
       meta.json
       brief.md
@@ -36,17 +36,36 @@ mini-projects/
 ## Run Naming
 
 標準:
-- `mini-projects/active/{YYYY-MM-DD}_{slug}/`
-- `mini-projects/archive/{YYYY-MM-DD}_{slug}/`
+- `mini-projects/active/M{NNNN}_{slug}/`
+- `mini-projects/archive/M{NNNN}_{slug}/`
+
+ID (`M{NNNN}`):
+- `M0001` から順に採番する通し番号
+- `mini-projects/catalog.md` の `next_id` が正本
+- active → archive へ移しても ID は変更しない
 
 slug 推奨:
-- 英数小文字
-- 単語は `-` で区切る
-- 4〜8 語程度まで
+- 日本語または英数小文字
+- 英数の場合は単語を `-` で区切る
+- 長くなりすぎない範囲で要点がわかる名前にする
+- パスにスペースを含めない（日本語は中黒・括弧なども避けると安全）
 
 例:
-- `2026-04-18_clipboard-helper`
-- `2026-04-18_invoice-csv-cleaner`
+- `M0001_請求書CSVクリーナー`
+- `M0002_clipboard-helper`
+- `M0003_invoice-csv-cleaner`
+
+## ID Allocation
+
+`catalog.md` の `next_id` が採番の正本。新規 run 作成時は次の順で操作する:
+
+1. `catalog.md` の `next_id` を読む（未作成なら `M0001` から開始）
+2. その ID でディレクトリを作る（`M{NNNN}_{slug}`）
+3. `catalog.md` の `next_id` を 1 増やして保存する
+4. `meta.json` の `id` にも同じ値を記録する
+
+ID は active → archive を移動しても変更しない。
+欠番は気にしない（誤って採番した場合は catalog にメモを残すだけで十分）。
 
 ## Required Files
 
@@ -63,8 +82,9 @@ slug 推奨:
 検索・再利用用の索引。
 
 必須キー:
+- `id`（`M0001` 形式）
 - `title`
-- `slug`
+- `slug`（日本語可・英数可）
 - `goal`
 - `status`
 - `created_at`

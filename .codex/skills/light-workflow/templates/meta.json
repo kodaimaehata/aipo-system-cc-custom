@@ -1,11 +1,12 @@
 {
-  "title": "Example Tool Project",
-  "slug": "example-tool-project",
+  "id": "M0001",
+  "title": "請求書CSVクリーナー",
+  "slug": "請求書CSVクリーナー",
   "goal": "Describe in one sentence what this mini-project should achieve.",
   "status": "active",
-  "created_at": "2026-04-18",
-  "updated_at": "2026-04-18",
-  "path": "mini-projects/active/2026-04-18_example-tool-project",
+  "created_at": "2026-04-20",
+  "updated_at": "2026-04-20",
+  "path": "mini-projects/active/M0001_請求書CSVクリーナー",
   "repo_paths": [],
   "tech_stack": [],
   "keywords": [

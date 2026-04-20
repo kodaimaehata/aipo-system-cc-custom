@@ -9,7 +9,7 @@ description: Produce, verify, and review deliverables for a lightweight mini-pro
 Loads the lightweight delivery skill for implementation, document production, verification, and review in `mini-projects/`.
 
 ## Inputs
-- Optional: run path such as `mini-projects/active/<date>_<slug>`
+- Optional: run path such as `mini-projects/active/M<NNNN>_<slug>`
 - Optional: task focus or work package within the run
 
 ## Execution

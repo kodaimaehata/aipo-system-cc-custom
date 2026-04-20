@@ -31,9 +31,12 @@ AIPO は長期・多段・正式案件向け。
 
 保存先は `mini-projects/` を使う。
 
-- 進行中: `mini-projects/active/{date}_{slug}/`
-- 完了後保管: `mini-projects/archive/{date}_{slug}/`
-- 一覧: `mini-projects/catalog.md`
+- 進行中: `mini-projects/active/M{NNNN}_{slug}/`
+- 完了後保管: `mini-projects/archive/M{NNNN}_{slug}/`
+- 一覧: `mini-projects/catalog.md`（先頭に `next_id: M{NNNN}` を保持）
+
+ID (`M0001` 等) はプロジェクト通し番号。active/archive を移動しても ID は変更しない。
+slug は日本語でも英数ハイフンでもよい（例: `M0001_請求書CSVクリーナー`, `M0002_clipboard-helper`）。
 
 `mini-projects/` は Git 管理対象外だが、後続案件のコンテキスト源として残す。
 削除前提にはしない。
@@ -81,8 +84,12 @@ AIPO は長期・多段・正式案件向け。
 ### 1. 対象 run を決める
 
 - ユーザーが既存 run を指定したらそれを使う
-- 未指定なら `mini-projects/active/{YYYY-MM-DD}_{slug}/` を新規作成する
-- slug はゴールを短く要約した英数ハイフン推奨
+- 未指定なら新規採番してディレクトリを作る:
+  1. `mini-projects/catalog.md` の `next_id` を確認して使う ID を決める
+     - catalog が未作成なら `templates/catalog.md` を写して `next_id: M0001` から始める
+  2. `mini-projects/active/M{NNNN}_{slug}/` を作成する
+  3. `catalog.md` の `next_id` を次の番号（例: `M0002`）に更新する
+- slug はゴールを短く要約。日本語可、英数ハイフン可。単語は空白ではなく `-` または日本語のまま
 
 ### 2. 初期ファイルを作る
 
@@ -93,6 +100,7 @@ AIPO は長期・多段・正式案件向け。
 ### 3. catalog を更新する
 
 `mini-projects/catalog.md` に以下を追記または更新:
+- id（`M0001` 等）
 - title
 - goal
 - status
