@@ -58,6 +58,7 @@ description: "AIPO Deliver phase for Codex CLI. Execute a selected task using `c
 ## 3) 成果物を保存する
 
 - 生成物は `<layer_dir>/documents/` または関連する場所に保存する。
+- Discoverで指定された共通成果物ファイルがある場合は、その1ファイルを更新し、対象Taskの `T0xx` 章を追記・更新する。
 - 調査ログ/意思決定ログが必要なら `<layer_dir>/context/` に追加し、`context.yaml` から参照できるようにする。
 
 ## 4) `tasks.yaml` を更新する

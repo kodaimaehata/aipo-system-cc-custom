@@ -32,6 +32,8 @@ rg -n "CMD_prj_02_ペルソナ" "src/aipo (AI-PO) system/CTX_command_templates/D
 ## 3) 各 `commands/*.md` を埋める
 
 - Goal / Done / Inputs / Steps / Outputs をプロジェクト文脈に合わせて具体化する。
+- `Outputs` は **Taskごとの別ファイルを増やさず、同一レイヤーで共有する主成果物ファイル1つ** を前提に書く。
+- 共有成果物ファイルは、`T0xx` 実行ごとに `## T0xx {task_name}` のような章を追加・更新する前提で書く。
 - `command_template_ref` があれば、テンプレの構造・観点を流用して埋める（丸写しではなく適用）。
 
 ## 4) 検証（任意・推奨）
@@ -39,4 +41,3 @@ rg -n "CMD_prj_02_ペルソナ" "src/aipo (AI-PO) system/CTX_command_templates/D
 ```bash
 python3 .codex/skills/aipo-workflow/scripts/validate_program.py --path "<layer_dir>"
 ```
-

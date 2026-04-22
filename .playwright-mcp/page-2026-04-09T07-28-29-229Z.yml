@@ -1,0 +1,133 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: INFOGRAPHIC SUMMARY
+    - heading "AIエージェント構築は Anthropicで設計し OpenAIで運用まで詰める" [level=1] [ref=e5]:
+      - text: AIエージェント構築は
+      - text: Anthropicで設計し
+      - text: OpenAIで運用まで詰める
+    - paragraph [ref=e6]: 2本の記事は競合というより補完関係にあります。Anthropic は構成の選び方に強く、OpenAI は導入判断とガードレール設計に強い、というのが最も実務的な読み方です。
+  - generic [ref=e7]:
+    - heading "1. 役割の違い" [level=2] [ref=e8]
+    - paragraph [ref=e9]: まず見るべき違いは、どこに重心を置いているかです。
+    - generic [ref=e10]:
+      - article [ref=e11]:
+        - generic [ref=e12]: Anthropic
+        - heading "構成設計に強い" [level=3] [ref=e13]
+        - paragraph [ref=e14]: 何をどう組むかを整理するガイド
+        - list [ref=e15]:
+          - listitem [ref=e16]: ワークフローとエージェントを分けて考える
+          - listitem [ref=e17]: 複雑化は明確な効果があるときだけ増やす
+          - listitem [ref=e18]: 代表パターンを使い分ける
+          - listitem [ref=e19]: 設計レビューの土台に向く
+      - article [ref=e20]:
+        - generic [ref=e21]: OpenAI
+        - heading "導入運用に強い" [level=3] [ref=e22]
+        - paragraph [ref=e23]: どの業務にどう入れるかを詰めるガイド
+        - list [ref=e24]:
+          - listitem [ref=e25]: そもそもエージェント向きの業務かを判断する
+          - listitem [ref=e26]: モデル、ツール、指示の三要素で設計する
+          - listitem [ref=e27]: 高リスク操作には人間承認を入れる
+          - listitem [ref=e28]: PoCから運用統制までつなげやすい
+  - generic [ref=e29]:
+    - heading "2. 共通する原則" [level=2] [ref=e30]
+    - paragraph [ref=e31]: 両者の一致点は明確です。いきなり複雑な複数エージェント構成にしないことです。
+    - generic [ref=e32]:
+      - article [ref=e33]:
+        - heading "単純な構成から始める" [level=3] [ref=e34]
+        - list [ref=e35]:
+          - listitem [ref=e36]: まず単発処理か固定フローで解けないかを見る
+          - listitem [ref=e37]: 自律性は必要分だけ足す
+      - article [ref=e38]:
+        - heading "ツール設計が重要" [level=3] [ref=e39]
+        - list [ref=e40]:
+          - listitem [ref=e41]: モデルの賢さだけでは実務品質は出にくい
+          - listitem [ref=e42]: 入力条件、返却形式、失敗時の扱いを明確にする
+      - article [ref=e43]:
+        - heading "評価ループを持たせる" [level=3] [ref=e44]
+        - list [ref=e45]:
+          - listitem [ref=e46]: 出力品質を測る仕組みを先に決める
+          - listitem [ref=e47]: 運用結果を見て複雑さを増減する
+  - generic [ref=e48]:
+    - heading "3. 比較マトリクス" [level=2] [ref=e49]
+    - paragraph [ref=e50]: 同じテーマを扱いながら、問いの立て方が異なります。
+    - generic [ref=e51]:
+      - generic [ref=e52]: 観点
+      - generic [ref=e53]: Anthropic
+      - generic [ref=e54]: OpenAI
+      - generic [ref=e55]: 主眼
+      - generic [ref=e56]: 設計パターンの分類
+      - generic [ref=e57]: 導入判断から運用管理までの実務指針
+      - generic [ref=e58]: 出発点
+      - generic [ref=e59]: ワークフローとエージェントの峻別
+      - generic [ref=e60]: どの業務にエージェントが適するかの見極め
+      - generic [ref=e61]: 強い論点
+      - generic [ref=e62]: パターン選択と複雑性管理
+      - generic [ref=e63]: モデル、ツール、指示、ガードレール
+      - generic [ref=e64]: 読後に決めやすいこと
+      - generic [ref=e65]: どの構成を採るか
+      - generic [ref=e66]: どこまで任せるか、どう安全に回すか
+  - generic [ref=e67]:
+    - heading "4. 実務での併用フレーム" [level=2] [ref=e68]
+    - paragraph [ref=e69]: 実際は二者択一ではありません。以下の順で使うと抜け漏れが減ります。
+    - generic [ref=e70]:
+      - article [ref=e71]:
+        - text: "1"
+        - heading "対象業務を選ぶ" [level=3] [ref=e72]
+        - paragraph [ref=e73]: OpenAI の観点
+        - list [ref=e74]:
+          - listitem [ref=e75]: 判断が必要か
+          - listitem [ref=e76]: 非構造データを扱うか
+      - article [ref=e77]:
+        - text: "2"
+        - heading "最小構成を決める" [level=3] [ref=e78]
+        - paragraph [ref=e79]: Anthropic の観点
+        - list [ref=e80]:
+          - listitem [ref=e81]: 単発処理か
+          - listitem [ref=e82]: 固定フローで足りるか
+      - article [ref=e83]:
+        - text: "3"
+        - heading "パターンを選ぶ" [level=3] [ref=e84]
+        - paragraph [ref=e85]: Anthropic の観点
+        - list [ref=e86]:
+          - listitem [ref=e87]: 分岐、並列、評価反復の必要性を絞る
+      - article [ref=e88]:
+        - text: "4"
+        - heading "ツールと指示を書く" [level=3] [ref=e89]
+        - paragraph [ref=e90]: OpenAI の観点
+        - list [ref=e91]:
+          - listitem [ref=e92]: 仕様、制約、成功条件を明確化する
+      - article [ref=e93]:
+        - text: "5"
+        - heading "ガードレールを入れる" [level=3] [ref=e94]
+        - paragraph [ref=e95]: OpenAI の観点
+        - list [ref=e96]:
+          - listitem [ref=e97]: 人間承認
+          - listitem [ref=e98]: 監査ログ
+      - article [ref=e99]:
+        - text: "6"
+        - heading "評価で戻す" [level=3] [ref=e100]
+        - paragraph [ref=e101]: 両者共通
+        - list [ref=e102]:
+          - listitem [ref=e103]: 失敗事例をもとに構成を調整する
+  - generic [ref=e104]:
+    - heading "5. どの場面で何を先に読むか" [level=2] [ref=e105]
+    - generic [ref=e106]:
+      - article [ref=e107]:
+        - heading "Anthropic を先に読む場面" [level=3] [ref=e108]
+        - list [ref=e109]:
+          - listitem [ref=e110]: 設計レビューの前に構成案を整理したい
+          - listitem [ref=e111]: 複数エージェント化が本当に必要かを見極めたい
+          - listitem [ref=e112]: 処理を固定フローに落とせるかを判断したい
+      - article [ref=e113]:
+        - heading "OpenAI を先に読む場面" [level=3] [ref=e114]
+        - list [ref=e115]:
+          - listitem [ref=e116]: PoC の実施可否を判断したい
+          - listitem [ref=e117]: ツール仕様や指示文の設計を詰めたい
+          - listitem [ref=e118]: 承認フローや監査ログまで含めて運用設計したい
+  - generic [ref=e119]:
+    - strong [ref=e120]: 結論
+    - text: AIエージェント構築では、Anthropic で構成の複雑さを抑え、OpenAI で業務適合性と安全運用を詰める、この順番が最も実務的です。
+    - generic [ref=e121]:
+      - text: 出典
+      - text: https://www.anthropic.com/engineering/building-effective-agents
+      - text: https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/
