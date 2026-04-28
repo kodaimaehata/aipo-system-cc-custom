@@ -37,6 +37,7 @@ This repository is documentation-only (Markdown); no build/test toolchain is che
 ## Agent-Specific Instructions
 
 - Quote paths with spaces in shell commands and keep edits narrowly scoped to the requested documents.
+- When the work benefits from parallel investigation, implementation, or review, use sub-agents as appropriate. Keep each delegated task concrete, bounded, and coordinated through written handoffs or file changes rather than relying only on conversation context.
 
 ## Response Style Addendum
 
