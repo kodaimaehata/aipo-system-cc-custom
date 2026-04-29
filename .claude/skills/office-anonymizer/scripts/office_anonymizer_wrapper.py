@@ -4,7 +4,9 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 import json
+import os
 import shutil
+import subprocess
 import sys
 
 
@@ -148,6 +150,7 @@ def run(
 
 
 def run_request(request: Mapping) -> dict:
+    _enforce_skill_mirror_sync()
     target_folder_text = _safe_request_value(request, "target_folder")
 
     try:
@@ -339,6 +342,250 @@ def run_request(request: Mapping) -> dict:
             },
         )
 
+
+
+def _enforce_skill_mirror_sync() -> None:
+    """Abort if .claude and .codex mirrors drift. Opt-out via env var for tests only."""
+    if os.environ.get("OFFICE_ANONYMIZER_SKIP_SYNC_CHECK") == "1":
+        return
+    try:
+        repo_root = Path(__file__).resolve().parents[4]
+        sync_script = repo_root / ".claude" / "scripts" / "sync_skills.py"
+        if not sync_script.exists():
+            return  # repo not laid out as expected; nothing we can assert against
+        result = subprocess.run(
+            [sys.executable, str(sync_script), "--check", "--skill", "office-anonymizer"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                "office-anonymizer skill mirrors are out of sync (.claude vs .codex). "
+                "Run `python .claude/scripts/sync_skills.py --write` to resync.\n"
+                + (result.stdout or "")
+            )
+    except FileNotFoundError:
+        return
+
+
+def run_orchestrated(
+    *,
+    target_folder: str | Path,
+    approved_mapping: Mapping[str, str] | None = None,
+    auto_approve: bool = False,
+    emit_mapping_to: str | Path | None = None,
+    enable_post_pass: bool = True,
+    enable_image_codex: bool = False,
+    extensions: Sequence[str] | str | None = None,
+) -> dict:
+    """Run the full orchestrated flow (discover -> propose -> SG5 -> post_pass ->
+    image_codex -> final_revalidate).
+
+    This is the entry point for the v2 skill: it drives user confirmation via a
+    cache-side candidates.yaml (written on first call) and refuses to proceed
+    until the caller supplies an ``approved_mapping`` that covers every
+    auto-detected candidate.
+
+    Returns a result dict with at minimum a ``status_label`` field. The caller
+    is responsible for surfacing ``pending_confirmation`` to the user and
+    invoking this function again with ``approved_mapping`` populated.
+    """
+    from cache_utils import (  # local import to stay cheap on the legacy path
+        ensure_cache_base,
+        janitor_sweep,
+        mkdtemp_run,
+        write_expires_at,
+    )
+
+    _enforce_skill_mirror_sync()
+    janitor_sweep()
+    ensure_cache_base()
+    run_dir = mkdtemp_run()
+    write_expires_at(run_dir)
+
+    folder = Path(target_folder).expanduser()
+    if not folder.is_dir():
+        raise UnsupportedScopeError(f"target_folder '{folder}' is not a directory.")
+
+    result: dict = {
+        "target_folder": str(folder),
+        "run_dir": str(run_dir),
+        "status_label": "pending_confirmation",
+    }
+
+    # Step 2/3: discover + heuristic candidate scan for every pptx in scope.
+    import candidate_scan  # local import
+    pptx_files = sorted(
+        p for p in folder.glob("*.pptx")
+        if not p.name.startswith("~$") and not p.name.endswith(".bak")
+    )
+    candidates_by_file: dict[str, list] = {}
+    for pptx in pptx_files:
+        candidates_by_file[pptx.name] = candidate_scan.scan_pptx(pptx)
+
+    # Step 4: propose mapping. If the caller has not yet supplied one, surface
+    # a candidates payload and return pending_confirmation.
+    if approved_mapping is None and not auto_approve:
+        candidates_payload = _serialize_candidates(candidates_by_file)
+        payload_path = run_dir / "candidates.yaml"
+        payload_path.write_text(candidates_payload, encoding="utf-8")
+        os.chmod(payload_path, 0o600)
+        result.update(
+            {
+                "candidates_path": str(payload_path),
+                "message": (
+                    "Edit the candidates file to set 'approve' and 'replacement' per "
+                    "candidate, then re-invoke run_orchestrated() with the resulting "
+                    "approved_mapping."
+                ),
+                "candidate_counts": {
+                    name: candidate_scan.summarize_counts(cands)
+                    for name, cands in candidates_by_file.items()
+                },
+            }
+        )
+        return result
+
+    mapping = dict(approved_mapping or {})
+
+    # Step 6: SG5 two-phase call. First detect with hints to enumerate
+    # candidate_ids, then confirm with approved_candidate_ids + per-candidate
+    # replacement text.
+    candidate_inputs = _mapping_to_candidate_inputs(mapping)
+    preview = run_request(
+        {
+            "target_folder": str(folder),
+            "extensions": extensions,
+            "body_text_candidate_inputs": candidate_inputs,
+        }
+    )
+    candidate_id_to_original = {
+        str(c.get("candidate_id")): str(c.get("normalized_text", ""))
+        for c in preview.get("body_text_candidate_summaries", [])
+    }
+    lower_mapping = {k.lower(): v for k, v in mapping.items()}
+    approved_candidate_ids: list[str] = []
+    replacement_overrides: dict[str, str] = {}
+    for candidate_id, normalized in candidate_id_to_original.items():
+        replacement = lower_mapping.get(normalized.lower())
+        if replacement is None:
+            continue
+        approved_candidate_ids.append(candidate_id)
+        replacement_overrides[candidate_id] = replacement
+
+    sg5_result = run_request(
+        {
+            "target_folder": str(folder),
+            "extensions": extensions,
+            "body_text_candidate_inputs": candidate_inputs,
+            "body_text_confirmation": {
+                "mode": "apply_confirmed",
+                "approved_candidate_ids": approved_candidate_ids,
+                "replacement_overrides": replacement_overrides,
+            },
+        }
+    )
+    result["sg5"] = {
+        "status": sg5_result.get("status"),
+        "report_path": sg5_result.get("report_path"),
+        "detected_finding_count": sg5_result.get("detected_finding_count"),
+        "approved_candidate_count": len(approved_candidate_ids),
+    }
+
+    # Step 7: position-based post_pass on every pptx.
+    if enable_post_pass and mapping:
+        import post_pass  # local import
+        for pptx in pptx_files:
+            try:
+                post_pass.run_post_pass(
+                    pptx_path=pptx,
+                    sg5_transform_results=sg5_result.get("validation_results") or [],
+                    replacement_overrides=replacement_overrides,
+                    approved_replacements=list(mapping.values()),
+                    approved_mapping=mapping,
+                    backup_dir=run_dir / "backups",
+                )
+            except post_pass.UnsupportedPostPassScope as exc:
+                result.setdefault("post_pass_errors", []).append(
+                    {"file": pptx.name, "error": str(exc)}
+                )
+
+    # Step 8: image anonymization via codex.
+    if enable_image_codex and mapping:
+        import image_codex_anonymize  # local import
+        for pptx in pptx_files:
+            image_codex_anonymize.anonymize_pptx_images(
+                pptx_path=pptx,
+                approved_mapping=mapping,
+                work_dir=run_dir / f"images-{pptx.stem}",
+            )
+
+    # Step 9: final revalidation. Any residual is a leak; block target_folder output.
+    import final_revalidate  # local import
+    leak_summary: list[dict] = []
+    for pptx in pptx_files:
+        hits = final_revalidate.revalidate_pptx(
+            pptx_path=pptx,
+            approved_originals=list(mapping.keys()),
+            approved_replacements=list(mapping.values()),
+        )
+        if hits:
+            report_path = final_revalidate.write_leak_report(run_dir, hits)
+            leak_summary.append(
+                {"file": pptx.name, "hits": len(hits), "report": str(report_path)}
+            )
+    if leak_summary:
+        result["status_label"] = "unresolved_leaks"
+        result["leaks"] = leak_summary
+        return result
+
+    # Step 10: optional mapping sheet emission (absolute path required).
+    if emit_mapping_to:
+        import mapping_sheet  # local import
+        mapping_sheet.emit_mapping_sheet(
+            Path(emit_mapping_to),
+            entries=[
+                {"category": "approved", "original": original, "replacement": replacement}
+                for original, replacement in mapping.items()
+            ],
+            source_file=folder,
+            run_id=run_dir.name,
+        )
+        result["mapping_sheet_path"] = str(emit_mapping_to)
+
+    # Step 11: cleanup on success.
+    shutil.rmtree(run_dir, ignore_errors=True)
+    result["status_label"] = "completed"
+    return result
+
+
+def _serialize_candidates(candidates_by_file: Mapping[str, list]) -> str:
+    """Serialize candidates to a minimal YAML-ish format editable by the user."""
+    lines = [
+        "# Edit this file to confirm the anonymization mapping.",
+        "# For each candidate, set 'approve: true' and a 'replacement' string.",
+        "# Pass the resulting mapping back via run_orchestrated(approved_mapping=...).",
+        "",
+    ]
+    for file_name, cands in candidates_by_file.items():
+        lines.append(f"# ---- {file_name} ----")
+        for cand in cands:
+            lines.append(
+                f"- text: \"{cand.text}\"  # {cand.category}, {cand.occurrences} occurrences"
+            )
+            lines.append("  approve: false")
+            lines.append("  replacement: \"\"")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _mapping_to_candidate_inputs(mapping: Mapping[str, str]) -> dict:
+    """Translate an approved_mapping into SG5 body_text_candidate_inputs."""
+    # We cannot tell category from the approved_mapping alone (string -> string),
+    # so we place every original into exact_phrases. SG5 treats these as exact
+    # literal matches.
+    return {"exact_phrases": list(mapping.keys())}
 
 
 def _normalize_request(request: Mapping) -> dict:
