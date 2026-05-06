@@ -1,0 +1,4 @@
+interface:
+  display_name: "Regulation Finance Security Research"
+  short_description: "規制、金融、セキュリティを出典重視で調査"
+  default_prompt: "Use $regulation-finance-security-research to research this regulatory, financial, legal, security, medical, or public-interest topic with reliable sources and risk analysis."

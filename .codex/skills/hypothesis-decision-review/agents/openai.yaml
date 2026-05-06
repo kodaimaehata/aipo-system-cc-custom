@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hypothesis Decision Review"
+  short_description: "仮説や意思決定案を多面的にレビュー"
+  default_prompt: "Use $hypothesis-decision-review to evaluate whether my hypothesis, understanding, or decision direction is logically and practically sound."

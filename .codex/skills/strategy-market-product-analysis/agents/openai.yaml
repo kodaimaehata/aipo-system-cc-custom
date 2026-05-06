@@ -1,0 +1,4 @@
+interface:
+  display_name: "Strategy Market Product Analysis"
+  short_description: "市場、競争、プロダクト戦略を分析"
+  default_prompt: "Use $strategy-market-product-analysis to analyze this market, industry, competitor landscape, product strategy, and business opportunity."
